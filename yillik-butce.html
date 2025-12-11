@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="tr" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinansMaster - Yıllık Ödeme Planlayıcısı</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Özel kaydırma çubuğu stilleri */
+        ::-webkit-scrollbar { height: 12px; width: 12px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 6px; border: 3px solid #f1f5f9; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        
+        /* Köşe birleşim yeri */
+        ::-webkit-scrollbar-corner { background: #f1f5f9; }
+
+        .no-select { user-select: none; }
+        
+        /* Tablo Hücre Ayarları */
+        td { white-space: nowrap; }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen overflow-hidden flex flex-col">
+
+    <!-- HEADER (Flex-none ile yüksekliği sabit, scroll etmez) -->
+    <header class="bg-black text-white px-6 py-4 shadow-lg border-b border-gray-800 flex-none z-50">
+        <div class="w-full flex justify-between items-center">
+            
+            <!-- Logo Alanı -->
+            <div class="flex items-center gap-4">
+                <!-- Mavi İkon -->
+                <div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                    <i data-lucide="wallet" class="text-white w-6 h-6"></i>
+                </div>
+                
+                <div class="flex flex-col">
+                    <h1 class="text-2xl font-bold tracking-tight">
+                        Finans<span class="text-cyan-400">Master</span>
+                    </h1>
+                    <span class="text-[10px] text-gray-400 tracking-widest uppercase font-medium">Ödeme Planlayıcısı</span>
+                </div>
+            </div>
+
+            <!-- Sağ Taraf: Yıl Sonu Dengesi -->
+            <div class="flex items-center gap-6">
+                <div class="text-right hidden sm:block">
+                    <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-0.5">YIL SONU BÜTÇE DENGESİ</p>
+                    <p id="headerYearEndBalance" class="text-2xl font-bold text-white font-mono tracking-tight tabular-nums">₺ 0,00</p>
+                </div>
+                
+                <!-- Tema İkonu (Dekoratif) -->
+                <button class="p-2 text-gray-400 hover:text-white transition-colors">
+                    <i data-lucide="sun" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Ana İçerik (Flex-grow ve overflow-auto ile kalan alanı doldurur ve kendi içinde scroll eder) -->
+    <main class="flex-grow w-full overflow-auto bg-gray-200 relative">
+        
+        <!-- Tablo Konteyner -->
+        <div class="min-w-max bg-white shadow-sm pb-2">
+            
+            <table class="w-full border-collapse text-xs text-gray-800" id="budgetTable">
+                <thead id="tableHeader">
+                    <!-- JS ile doldurulacak -->
+                </thead>
+                <tbody id="tableBody">
+                    <!-- JS ile doldurulacak -->
+                </tbody>
+            </table>
+
+        </div>
+    </main>
+
+    <!-- FOOTER (Flex-none ile sayfa altında sabit durur) -->
+    <footer class="bg-black text-gray-400 py-3 border-t border-gray-800 flex-none z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+        <div class="w-full px-6 flex flex-col md:flex-row justify-between items-center gap-4 text-xs">
+            <div>
+                &copy; 2026 FinansMaster. Tüm hakları saklıdır.
+            </div>
+            <div class="flex gap-6">
+                <a href="#" class="hover:text-cyan-400 transition-colors">Gizlilik Politikası</a>
+                <a href="#" class="hover:text-cyan-400 transition-colors">Kullanım Şartları</a>
+                <a href="#" class="hover:text-cyan-400 transition-colors">Destek</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // İkonları Yükle
+        lucide.createIcons();
+
+        // --- VERİLER ---
+        const months = [
+            "OCAK 26", "ŞUBAT 26", "MART 26", "NİSAN 26", "MAYIS 26", "HAZİRAN 26",
+            "TEMMUZ 26", "AĞUSTOS 26", "EYLÜL 26", "EKİM 26", "KASIM 26", "ARALIK 26"
+        ];
+
+        // Hesaplama Sabitleri
+        const dollarRate = 42.45;
+        const baseDollarIncome = 2215;
+        const increasedDollarIncome = baseDollarIncome * 1.02; // %2 artış
+
+        // Gelir Dizisini Hesapla
+        const calculatedIncome = months.map((month, index) => {
+            // Şubat (Index 1) Gelir Yok
+            if (index === 1) return 0;
+            
+            // Kasım (Index 10) ve Aralık (Index 11) %2 Zamlı
+            if (index >= 10) {
+                return increasedDollarIncome * dollarRate;
+            }
+
+            // Diğer Aylar Standart
+            return baseDollarIncome * dollarRate;
+        });
+
+        const rawData = {
+            dolarKuru: Array(12).fill(dollarRate),
+            incomes: [
+                { name: "Amerika Kira", values: calculatedIncome },
+                { name: "Tarla Kirası", values: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }
+            ],
+            expenses: {
+                fixed: [
+                    { name: "Kira", values: Array(12).fill(15000.00) },
+                    { name: "Bağkur Taksiti", values: [0, 1141.79, 1164.36, 1185.48, 1208.05, 1229.90, 1252.47, 1274.32, 1296.89, 1319.46, 1341.31, 1363.88] },
+                    { name: "Güven Kredi (19*1592 TL)", values: [0, 4800.00, 1600.00, 1600.00, 3200.00, 3200.00, 3200.00, 3200.00, 3200.00, 3200.00, 1600.00, 1600.00] },
+                    { name: "Hazal & Gonca", values: [0, 0, 1500.00, 1500.00, 1500.00, 1500.00, 1500.00, 1500.00, 1500.00, 1500.00, 1500.00, 1500.00] },
+                    { name: "Genel Sağlık Sigortası-M.", values: [0, 0, 428.00, 428.00, 428.00, 428.00, 428.00, 428.00, 428.00, 428.00, 428.00, 428.00] },
+                    { name: "Genel Sağlık Sigortası-Y.", values: [0, 0, 428.00, 428.00, 428.00, 428.00, 428.00, 428.00, 428.00, 428.00, 428.00, 428.00] },
+                    { name: "Türk Telekom TL Paket", values: [0, 0, 200.00, 200.00, 200.00, 200.00, 200.00, 200.00, 200.00, 200.00, 200.00, 200.00] },
+                ],
+                variable: [
+                    { name: "Market Aksoy Bufe", values: [19000.00, 13000.00, 15000.00, 15000.00, 15000.00, 15000.00, 15000.00, 15000.00, 15000.00, 15000.00, 15000.00, 15000.00] }
+                ],
+                extra: [
+                    { name: "Doğum Günleri", values: [0, 1500.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+                    { name: "Geçmiş Kira", values: [0, 10000.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+                    { name: "Kira Farkı", values: [0, 23000.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }
+                ],
+                debts: [
+                    { name: "Bahadır Korkmaz", values: [0, 0, 2000.00, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+                    { name: "Ecevit Abi", values: [0, 0, 350.00, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+                    { name: "Recep İlhan", values: [0, 0, 1000.00, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+                    { name: "Serdar Akbaş", values: [0, 0, 1000.00, 1000.00, 0, 0, 0, 0, 0, 0, 0, 0] },
+                    { name: "Erdem Bey", values: [0, 0, 1500.00, 0, 0, 0, 0, 0, 0, 0, 0, 0] }
+                ],
+                subscriptions: [
+                    { name: "Google One", values: Array(12).fill(50.00) },
+                    { name: "Dejure.ai", values: [1000.00, 500.00, 500.00, 500.00, 500.00, 500.00, 500.00, 500.00, 500.00, 500.00, 500.00, 500.00] },
+                    { name: "Microsoft Office", values: Array(12).fill(200.00) },
+                    { name: "Adobe Master Collection", values: Array(12).fill(110.00) },
+                    { name: "Chat GPT", values: [600.00, 660.00, 660.00, 660.00, 660.00, 660.00, 660.00, 660.00, 660.00, 660.00, 660.00, 660.00] },
+                    { name: "Youtube Premium", values: Array(12).fill(120.00) }
+                ]
+            }
+        };
+
+        // --- YARDIMCI FONKSİYONLAR ---
+        function formatCurrency(amount, showSymbol = true) {
+            if (amount === 0) return '-';
+            const formatted = new Intl.NumberFormat('tr-TR', { 
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2 
+            }).format(amount);
+            return formatted;
+        }
+
+        // --- HESAPLAMA MANTIĞI ---
+        function calculateSummary() {
+            const summary = months.map((month, index) => {
+                let totalIncome = 0;
+                let totalExpense = 0;
+
+                rawData.incomes.forEach(item => totalIncome += item.values[index]);
+                Object.keys(rawData.expenses).forEach(category => {
+                    rawData.expenses[category].forEach(item => totalExpense += item.values[index]);
+                });
+
+                return {
+                    income: totalIncome,
+                    expense: totalExpense,
+                    net: totalIncome - totalExpense
+                };
+            });
+
+            // Kümülatif Hesaplama
+            let cumulative = 0;
+            summary.forEach(d => {
+                cumulative += d.net;
+                d.cumulative = cumulative;
+            });
+
+            return summary;
+        }
+
+        const summaryData = calculateSummary();
+
+        // --- YIL SONU BÜTÇE DENGESİ HESAPLAMA (HEADER İÇİN) ---
+        function updateHeaderBalance() {
+            const yearEndBalance = summaryData[11].cumulative;
+            const element = document.getElementById('headerYearEndBalance');
+            
+            element.innerText = formatCurrency(yearEndBalance, false) + " TL";
+            
+            if (yearEndBalance < 0) {
+                element.classList.remove('text-green-500', 'text-white');
+                element.classList.add('text-rose-500');
+            } else {
+                element.classList.remove('text-rose-500', 'text-white');
+                element.classList.add('text-green-500');
+            }
+        }
+        
+        updateHeaderBalance();
+
+        // --- HTML OLUŞTURMA FONKSİYONLARI ---
+
+        // 1. Dolar Kuru Satırı
+        function createDollarRow() {
+            let html = `
+            <tr class="bg-[#3f3f3f] text-white border-b border-gray-500">
+                <td class="p-2 pl-4 font-bold border-r border-gray-500 text-left w-1/6 sticky left-0 bg-[#3f3f3f] z-20">DOLAR KURU</td>`;
+            
+            rawData.dolarKuru.forEach(rate => {
+                html += `
+                <td class="p-2 text-left w-4 text-gray-400 no-select border-l border-gray-600">₺</td>
+                <td class="p-2 text-right font-mono font-bold text-gray-200">${rate.toFixed(2).replace('.', ',')}</td>`;
+            });
+            html += `</tr>`;
+            return html;
+        }
+
+        // 2. Aylar Başlık Satırı
+        function createMonthHeaderRow(title, bgColorClass = "bg-[#f2f2f2]") {
+            const textColor = title === "GELİRLER" ? "text-gray-900" : "text-gray-800";
+            
+            let html = `
+            <tr class="${bgColorClass} ${textColor} font-bold text-xs border-b border-gray-300">
+                <td class="p-2 pl-4 border-r border-gray-300 sticky left-0 ${bgColorClass} z-20 uppercase tracking-wider">${title}</td>`;
+            
+            months.forEach(m => {
+                html += `
+                <td class="border-r-0"></td>
+                <td class="p-2 text-center border-r border-gray-300 min-w-[90px]">${m}</td>`;
+            });
+            html += `</tr>`;
+            return html;
+        }
+
+        // 3. Standart Veri Satırı
+        function createDataRow(label, values, isBold = false, bgColorClass = "bg-white", isHeaderRow = false) {
+            // Z-index not: sticky hücreler içerik hücrelerinden (z-10) daha üstte olmalı (z-20)
+            // Ama standart veri satırı başlıkları z-10 yeterli
+            let html = `<tr class="${bgColorClass} hover:bg-gray-50 transition-colors border-b border-gray-200 text-gray-700">
+                <td class="p-2 pl-4 border-r border-gray-200 whitespace-nowrap sticky left-0 ${bgColorClass} z-10 ${isBold ? 'font-bold text-gray-900' : ''}">${label}</td>`;
+            
+            values.forEach(val => {
+                let displayVal = val;
+                if (!isHeaderRow) {
+                    displayVal = formatCurrency(val, false);
+                }
+                html += `
+                <td class="p-2 text-left w-4 border-r-0 text-gray-400 no-select text-[10px] pt-2.5">₺</td>
+                <td class="p-2 pr-4 text-right border-r border-gray-200 font-mono text-xs ${isBold ? 'font-bold text-gray-900' : ''}">${displayVal}</td>`;
+            });
+            html += `</tr>`;
+            return html;
+        }
+
+        // --- RENDER ---
+        const tableBody = document.getElementById('tableBody');
+        let tableHTML = "";
+
+        // 0. Ana Başlık
+        // Bu başlık sticky değil, en üstte bir kez görünür.
+        tableHTML += `
+            <tr class="bg-[#2f3e53] text-white text-center font-bold text-sm tracking-wide border-b border-gray-600">
+                <td colspan="25" class="py-2 sticky left-0 z-20 bg-[#2f3e53]">2026 YILLIK BÜTÇE & ÖDEME TABLOSU</td>
+            </tr>
+        `;
+
+        // 1. Dolar Kuru
+        tableHTML += createDollarRow();
+
+        // 2. Bütçe Özeti Başlığı
+        tableHTML += createMonthHeaderRow("BÜTÇE ÖZETİ");
+
+        // 3. Özet Satırları
+        tableHTML += createDataRow("TOPLAM GELİR", summaryData.map(d => d.income), true);
+        tableHTML += createDataRow("TOPLAM GİDER", summaryData.map(d => d.expense));
+        
+        // Net Satırı
+        tableHTML += `<tr class="bg-gray-100 font-bold border-b-2 border-gray-400 text-gray-800">
+            <td class="p-2 pl-4 text-right border-r border-gray-300 sticky left-0 bg-gray-100 z-10">NET DURUM</td>`;
+        summaryData.forEach(d => {
+            const colorClass = d.net < 0 ? 'text-red-600' : 'text-green-600';
+            tableHTML += `
+            <td class="p-2 text-left w-4 text-gray-400 no-select">₺</td>
+            <td class="p-2 pr-4 text-right border-r border-gray-300 font-mono ${colorClass}">${formatCurrency(d.net, false)}</td>`;
+        });
+        tableHTML += `</tr>`;
+
+        // Yıllık Finansal Durum
+        tableHTML += `<tr class="bg-white font-bold border-b border-gray-300 h-12 text-gray-800 shadow-sm">
+            <td class="p-2 pl-4 border-r border-gray-300 align-middle sticky left-0 bg-white z-10">YILLIK KÜMÜLATİF</td>`;
+        summaryData.forEach(d => {
+            const colorClass = d.cumulative < 0 ? 'text-red-600' : 'text-blue-600';
+            tableHTML += `
+            <td class="p-2 text-left w-4 text-gray-400 align-middle no-select">₺</td>
+            <td class="p-2 pr-4 text-right border-r border-gray-300 align-middle font-mono text-sm ${colorClass}">${formatCurrency(d.cumulative, false)}</td>`;
+        });
+        tableHTML += `</tr>`;
+
+        // Boşluk
+        tableHTML += `<tr class="h-6 bg-gray-50"><td colspan="25"></td></tr>`;
+
+        // 4. Gelirler Bölümü
+        tableHTML += createMonthHeaderRow("GELİRLER");
+        rawData.incomes.forEach(item => {
+            tableHTML += createDataRow(item.name, item.values);
+        });
+
+        // Toplam Gelirler Alt Satırı
+        tableHTML += `<tr class="bg-green-50 font-bold border-t border-b border-gray-300 text-gray-900">
+            <td class="p-2 pl-4 text-right border-r border-gray-300 sticky left-0 bg-green-50 z-10 text-xs uppercase">Toplam Gelirler</td>`;
+        summaryData.forEach(d => {
+             tableHTML += `
+            <td class="p-2 text-left w-4 text-gray-500 no-select">₺</td>
+            <td class="p-2 pr-4 text-right border-r border-gray-300 font-mono">${formatCurrency(d.income, false)}</td>`;
+        });
+        tableHTML += `</tr>`;
+
+        tableHTML += `<tr class="h-6 bg-gray-50"><td colspan="25"></td></tr>`;
+
+        // 5. Giderler Bölümü
+        const expenseSections = [
+            { title: "SABİT GİDERLER", key: 'fixed' },
+            { title: "DEĞİŞKEN GİDERLER", key: 'variable' },
+            { title: "EKSTRA ÖDEMELER", key: 'extra' },
+            { title: "KİŞİLERE BORÇLAR", key: 'debts' },
+            { title: "ABONELİKLER", key: 'subscriptions' }
+        ];
+
+        const sectionColors = {
+            'fixed': 'bg-blue-50 text-blue-900',
+            'variable': 'bg-yellow-50 text-yellow-900',
+            'extra': 'bg-orange-50 text-orange-900',
+            'debts': 'bg-red-50 text-red-900',
+            'subscriptions': 'bg-purple-50 text-purple-900'
+        };
+
+        expenseSections.forEach(section => {
+            const colorClass = sectionColors[section.key] || 'bg-gray-100';
+            
+            tableHTML += `
+            <tr class="${colorClass} font-bold text-xs border-b border-gray-300 mt-4">
+                <td class="p-2 pl-4 border-r border-gray-300 sticky left-0 ${colorClass} z-10 uppercase tracking-wider">${section.title}</td>`;
+            months.forEach(m => {
+                 tableHTML += `<td class="border-r-0"></td><td class="p-2 text-center border-r border-gray-300 text-opacity-50 select-none">-</td>`;
+            });
+            tableHTML += `</tr>`;
+
+            rawData.expenses[section.key].forEach(item => {
+                tableHTML += createDataRow(item.name, item.values);
+            });
+            
+            tableHTML += `<tr class="h-2 bg-white"><td colspan="25"></td></tr>`;
+        });
+
+        tableBody.innerHTML = tableHTML;
+
+    </script>
+</body>
+</html>

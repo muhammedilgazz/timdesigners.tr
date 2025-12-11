@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>5 Aralık Finansal Rapor & Detaylı Market Listesi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        /* Input Stilleri - Hesaplama için */
+        .input-calc {
+            background-color: transparent;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 2px 4px;
+            outline: none;
+            transition: border-color 0.2s;
+            color: #374151;
+            font-weight: 500;
+        }
+
+        .input-calc:focus {
+            border-color: #9333ea;
+            background-color: #fdf4ff;
+        }
+
+        /* Market Tablosu Özel Ayarları (Uzun liste için) */
+        .market-table-row td {
+            padding-top: 4px;
+            padding-bottom: 4px;
+        }
+
+        .market-brand {
+            font-size: 0.7rem;
+            color: #6b7280;
+            display: block;
+        }
+
+        /* Yazdırma Ayarları - Print CSS */
+        @media print {
+            body {
+                background-color: white;
+                margin: 0;
+                padding: 0;
+                font-size: 10px;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .print-container {
+                box-shadow: none !important;
+                border: none !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            .bg-slate-50 {
+                background-color: #f8fafc !important;
+            }
+
+            a {
+                text-decoration: none;
+                color: black;
+            }
+
+            .page-break-inside-avoid {
+                page-break-inside: avoid;
+            }
+
+            /* Uzun market listesi için sayfa kesilmelerini yönet */
+            tr {
+                page-break-inside: avoid;
+            }
+
+            td,
+            th {
+                padding-top: 2px !important;
+                padding-bottom: 2px !important;
+            }
+
+            /* Yazdırırken input sınırlarını sadeleştir */
+            .input-calc {
+                border-bottom: none;
+                text-align: right;
+            }
+
+            /* Placeholderları gizle */
+            ::placeholder {
+                color: transparent;
+            }
+        }
+
+        .checkbox-print {
+            height: 14px;
+            width: 14px;
+            border: 2px solid #cbd5e1;
+            border-radius: 3px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        /* Sayı inputlarından okları kaldır */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body class="p-4 md:p-8" onload="initMarketTable();">
+
+    <!-- Kontrol Paneli -->
+    <div
+        class="max-w-4xl mx-auto mb-6 flex flex-col md:flex-row justify-between items-center no-print bg-white p-4 rounded-lg shadow-sm border border-gray-200 gap-4">
+        <div>
+            <h2 class="font-bold text-gray-700">Rapor Hazır</h2>
+            <p class="text-sm text-gray-500">Mükerrer kayıtlar temizlendi. Köfte, Sucuk ve Mantı ötelendi.</p>
+        </div>
+        <button type="button" onclick="window.print(); return false;"
+            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg shadow transition duration-200 flex items-center gap-2 cursor-pointer">
+            <i class="fa-solid fa-print"></i> Yazdır / PDF Kaydet
+        </button>
+    </div>
+
+    <!-- Rapor Kağıdı -->
+    <div
+        class="print-container max-w-5xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg border border-gray-200 text-gray-800">
+
+        <!-- Başlık -->
+        <header class="flex justify-between items-end border-b-2 border-gray-800 pb-4 mb-6">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-900 uppercase tracking-wide">Finansal Rapor</h1>
+                <p class="text-gray-500 mt-1 text-sm">Detaylı Bütçe & Market Entegrasyonu</p>
+            </div>
+            <div class="text-right">
+                <div class="text-2xl font-bold text-gray-800">5 ARALIK</div>
+                <div class="text-sm text-gray-500">2025</div>
+                <div class="text-xs bg-gray-100 px-2 py-1 rounded mt-1 inline-block">
+                    USD/TL: <span class="font-bold">42.44</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Özet -->
+        <div class="grid grid-cols-3 gap-4 mb-6">
+            <div class="border border-gray-200 rounded p-3 bg-green-50">
+                <p class="text-[10px] md:text-xs font-semibold text-green-600 uppercase">Toplam Gelir</p>
+                <p class="text-lg font-bold text-gray-800 mt-1" id="total-income">0,00 TL</p>
+            </div>
+            <div class="border border-gray-200 rounded p-3 bg-red-50">
+                <p class="text-[10px] md:text-xs font-semibold text-red-600 uppercase">Planlanan Gider</p>
+                <p class="text-lg font-bold text-gray-800 mt-1" id="total-expense">0,00 TL</p>
+            </div>
+            <div class="border border-gray-200 rounded p-3 bg-blue-50">
+                <p class="text-[10px] md:text-xs font-semibold text-blue-600 uppercase">Net Durum</p>
+                <p class="text-lg font-bold text-gray-800 mt-1" id="net-status">0,00 TL</p>
+            </div>
+        </div>
+
+        <!-- Bölüm 1: Gelirler -->
+        <div class="mb-6 page-break-inside-avoid">
+            <h3
+                class="font-bold text-base border-l-4 border-green-500 pl-2 mb-2 text-gray-800 flex items-center justify-between pr-2">
+                <span class="flex items-center gap-2"><i class="fa-solid fa-arrow-down text-green-500"></i>
+                    GELİRLER</span>
+                <span id="header-income-total" class="text-sm font-normal text-gray-500"></span>
+            </h3>
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-600 text-[10px] uppercase tracking-wider border-b border-gray-300">
+                        <th class="p-2 w-8 text-center">#</th>
+                        <th class="p-2">Açıklama</th>
+                        <th class="p-2">Detay</th>
+                        <th class="p-2 text-right">Tutar (TL)</th>
+                        <th class="p-2 text-center w-10">Tahsil</th>
+                    </tr>
+                </thead>
+                <tbody class="text-sm">
+                    <tr class="border-b border-gray-200">
+                        <td class="p-2 text-center text-gray-400 text-xs">1</td>
+                        <td class="p-2 font-semibold">Kira Geliri</td>
+                        <td class="p-2 text-gray-600 text-xs">2215 USD x 42.44</td>
+                        <td class="p-2 text-right font-bold text-green-700">94.004,60 TL</td>
+                        <td class="p-2 text-center">
+                            <div class="checkbox-print"></div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ANA İÇERİK GRID (SABİT TABLOLAR) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+
+            <!-- SOL SÜTUN -->
+            <div class="flex flex-col gap-6">
+
+                <!-- Bölüm 2: Faturalar -->
+                <div class="page-break-inside-avoid" id="sec-fixed">
+                    <h3
+                        class="font-bold text-base border-l-4 border-red-500 pl-2 mb-2 text-gray-800 flex items-center justify-between pr-2">
+                        <span class="flex items-center gap-2"><i class="fa-solid fa-house-user text-red-500"></i> SABİT
+                            GİDERLER & FATURALAR</span>
+                        <span id="header-fixed-total" class="text-sm font-normal text-gray-500"></span>
+                    </h3>
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr
+                                class="bg-gray-100 text-gray-600 text-[10px] uppercase tracking-wider border-b border-gray-300">
+                                <th class="p-2 w-8 text-center">#</th>
+                                <th class="p-2">Gider Türü</th>
+                                <th class="p-2">Detay / Abone No</th>
+                                <th class="p-2 text-right w-24">Tutar</th>
+                                <th class="p-2 text-center w-8">Ödendi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm text-gray-700">
+                            <tr class="border-b border-gray-200 bg-red-50">
+                                <td class="p-2 text-center text-gray-400 text-xs">1</td>
+                                <td class="p-2 font-bold">Kira (Güncel)</td>
+                                <td class="p-2 text-xs font-mono text-gray-500">Aralık 2025</td>
+                                <td class="p-2 text-right font-bold text-gray-800 whitespace-nowrap calc-expense"
+                                    data-value="23000">23.000 TL</td>
+                                <td class="p-2 text-center">
+                                    <div class="checkbox-print"></div>
+                                </td>
+                            </tr>
+                            <tr class="border-b border-gray-200">
+                                <td class="p-2 text-center text-gray-400 text-xs">2</td>
+                                <td class="p-2 font-bold">Aidat</td>
+                                <td class="p-2 text-xs font-mono text-gray-500">Aralık 2025</td>
+                                <td class="p-2 text-right font-bold text-gray-800 whitespace-nowrap calc-expense"
+                                    data-value="450">450 TL</td>
+                                <td class="p-2 text-center">
+                                    <div class="checkbox-print"></div>
+                                </td>
+                            </tr>
+                            <tr class="border-b border-gray-200 bg-slate-50">
+                                <td class="p-2 text-center text-gray-400 text-xs">3</td>
+                                <td class="p-2 font-medium">Youtube Premium Aile</td>
+                                <td class="p-2 text-xs font-mono text-gray-500">______________</td>
+                                <td class="p-2 text-right font-bold text-gray-800 whitespace-nowrap calc-expense"
+                                    data-value="149.99">149,99 TL</td>
+                                <td class="p-2 text-center">
+                                    <div class="checkbox-print"></div>
+                                </td>
+                            </tr>
+                            <tr class="border-b border-gray-200">
+                                <td class="p-2 text-center text-gray-400 text-xs">4</td>
+                                <td class="p-2 font-medium">Türkcell Emre</td>
+                                <td class="p-2 text-xs font-mono text-gray-500">______________</td>
+                                <td class="p-2 text-right font-bold text-gray-800 whitespace-nowrap calc-expense"
+                                    data-value="1700">1.700 TL</td>
+                                <td class="p-2 text-center">
+                                    <div class="checkbox-print"></div>
+                                </td>
+                            </tr>
+                            <tr class="border-b border-gray-200 bg-slate-50">
+                                <td class="p-2 text-center text-gray-400 text-xs">5</td>
+                                <td class="p-2 font-medium">Türkcell</td>
+                                <td class="p-2 text-xs font-mono text-gray-500">______________</td>
+                                <td class="p-2 text-right font-bold text-gray-800 whitespace-nowrap calc-expense"
+                                    data-value="470">470 TL</td>
+                                <td class="p-2 text-center">
+                                    <div class="checkbox-print"></div>
+                                </td>
+                            </tr>
+                            <tr class="border-b border-gray-200">
+                                <td class="p-2 text-center text-gray-400 text-xs">6</td>
+                                <td class="p-2 font-medium">İnternet</td>
+                                <td class="p-2 text-xs font-mono text-gray-500">______________</td>
+                                <td class="p-2 text-right font-bold text-gray-800 whitespace-nowrap calc-expense"
+                                    data-value="1000">1.000 TL</td>
+                                <td class="p-2 text-center">
+                                    <div class="checkbox-print"></div>
+                                </td>
+                            </tr>
+                            <tr class="border-b border-gray-200 bg-slate-50">
+                                <td class="p-2 text-center text-gray-400 text-xs">7</td>
+                                <td class="p-2 font-medium">Elektrik</td>
+                                <td class="p-2 text-xs font-mono text-gray-500">______________</td>
+                                <td class="p-2 text-right whitespace-nowrap">_______</td>
+                                <td class="p-2 text-center">
+                                    <div class="checkbox-print"></div>
+                                </td>
+                            </tr>
+                            <tr class="border-b border-gray-200">
+                                <td class="p-2 text-center text-gray-400 text-xs">8</td>
+                                <td class="p-2 font-medium">Su</td>
+                                <td class="p-2 text-xs font-mono text-gray-800 font-bold">12309547</td>
+                                <td class="p-2 text-right whitespace-nowrap">_______</td>
+                                <td class="p-2 text-center">
+                                    <div class="checkbox-print"></div>
+                                </td>
+                            </tr>
+                            <tr class="border-b border-gray-200 bg-slate-50">
+                                <td class="p-2 text-center text-gray-400 text-xs">9</td>
+                                <td class="p-2 font-medium">Doğalgaz</td>
+                                <td class="p-2 text-xs font-mono text-gray-500">______________</td>
+                                <td class="p-2 text-right whitespace-nowrap">_______</td>
+                                <td class="p-2 text-center">
+                                    <div class="checkbox-print"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Bölüm: Diğer Ödemeler -->
+                <div class="page-break-inside-avoid" id="sec-other">
+                    <h3
+                        class="font-bold text-base border-l-4 border-red-700 pl-2 mb-2 text-gray-800 flex items-center justify-between pr-2">
+                        <span class="flex items-center gap-2"><i class="fa-solid fa-wallet text-red-700"></i> DİĞER
+                            ÖDEMELER</span>
+                        <span id="header-other-total" class="text-sm font-normal text-gray-500"></span>
+                    </h3>
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr
+                                class="bg-gray-100 text-gray-600 text-[10px] uppercase tracking-wider border-b border-gray-300">
+                                <th class="p-2 w-8 text-center">#</th>
+                                <th class="p-2">Açıklama</th>
+                                <th class="p-2 text-right w-24">Tutar</th>
+                                <th class="p-2 text-center w-8">Durum</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm text-gray-700">
+                            <tr class="border-b border-gray-200 bg-slate-50">
+                                <td class="p-2 text-center text-gray-400 text-xs">1</td>
+                                <td class="p-2 font-medium">Bisiklet Borç</td>
+                                <td class="p-2 text-right font-bold text-gray-800 calc-expense" data-value="9000">9.000
+                                    TL</td>
+                                <td class="p-2 text-center">
+                                    <div class="checkbox-print"></div>
+                                </td>
+                            </tr>
+                            <tr class="border-b border-gray-200">
+                                <td class="p-2 text-center text-gray-400 text-xs">2</td>
+                                <td class="p-2 font-medium">Emre İlaç</td>
+                                <td class="p-2 text-right font-bold text-gray-800 calc-expense" data-value="10000">
+                                    10.000 TL</td>
+                                <td class="p-2 text-center">
+                                    <div class="checkbox-print"></div>
+                                </td>
+                            </tr>
+                            <tr class="border-b border-gray-200 bg-slate-50">
+                                <td class="p-2 text-center text-gray-400 text-xs">3</td>
+                                <td class="p-2 font-medium">Telefon Tamir</td>
+                                <td class="p-2 text-right font-bold text-gray-800 calc-expense" data-value="1500">1.500
+                                    TL</td>
+                                <td class="p-2 text-center">
+                                    <div class="checkbox-print"></div>
+                                </td>
+                            </tr>
+                            <tr class="border-b border-gray-200">
+                                <td class="p-2 text-center text-gray-400 text-xs">4</td>
+                                <td class="p-2 font-medium">Emre Telefon Tamir</td>
+                                <td class="p-2 text-right font-bold text-gray-800 calc-expense" data-value="1500">1.500
+                                    TL</td>
+                                <td class="p-2 text-center">
+                                    <div class="checkbox-print"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Bölüm: Geçikmiş Ödemeler -->
+                <div class="page-break-inside-avoid" id="sec-overdue">
+                    <h3
+                        class="font-bold text-base border-l-4 border-gray-800 pl-2 mb-2 text-gray-800 flex items-center justify-between pr-2">
+                        <span class="flex items-center gap-2"><i class="fa-solid fa-history text-gray-600"></i> GEÇİKMİŞ
+                            ÖDEMELER</span>
+                        <span id="header-overdue-total" class="text-sm font-normal text-gray-500"></span>
+                    </h3>
+                    <div class="rounded border border-gray-200 p-0 overflow-hidden">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr
+                                    class="text-gray-600 bg-gray-50 text-[10px] uppercase tracking-wider border-b border-gray-200">
+                                    <th class="p-2 w-8 text-center">#</th>
+                                    <th class="p-2 w-1/4">Ödeme Yeri</th>
+                                    <th class="p-2 w-1/4">Açıklama</th>
+                                    <th class="p-2 text-right text-gray-400 font-normal">Top. Borç</th>
+                                    <th class="p-2 text-right w-20 font-bold text-gray-800 bg-orange-50">Planlanan</th>
+                                    <th class="p-2 text-center w-8">Drm</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-xs md:text-sm text-gray-700">
+                                <tr class="border-b border-gray-100 bg-white">
+                                    <td class="p-2 text-center text-gray-400 text-xs">1</td>
+                                    <td class="p-2 font-bold text-gray-700">Eski Kira</td>
+                                    <td class="p-2 text-xs text-gray-500">Geçmiş Borç</td>
+                                    <td class="p-2 text-right text-gray-400 text-xs">23.000 TL</td>
+                                    <td class="p-2 text-right font-bold text-gray-800 bg-orange-50 calc-expense" data-value="13000">
+                                        13.000 TL</td>
+                                    <td class="p-2 text-center">
+                                        <div class="checkbox-print"></div>
+                                    </td>
+                                </tr>
+                                <tr class="border-b border-gray-100 bg-slate-50">
+                                    <td class="p-2 text-center text-gray-400 text-xs">2</td>
+                                    <td class="p-2 font-bold text-gray-700">Geçmiş Aidat</td>
+                                    <td class="p-2 text-xs text-gray-500">Geçmiş Borç</td>
+                                    <td class="p-2 text-right text-gray-400 text-xs">1.800 TL</td>
+                                    <td class="p-2 text-right font-bold text-gray-800 bg-orange-50 calc-expense" data-value="900">
+                                        900 TL</td>
+                                    <td class="p-2 text-center">
+                                        <div class="checkbox-print"></div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- SAĞ SÜTUN -->
+            <div class="flex flex-col gap-6">
+
+                <!-- Bölüm: Kişilere Borçlar -->
+                <div class="page-break-inside-avoid" id="sec-debts">
+                    <h3
+                        class="font-bold text-base border-l-4 border-orange-500 pl-2 mb-2 text-gray-800 flex items-center justify-between pr-2">
+                        <span class="flex items-center gap-2"><i
+                                class="fa-solid fa-hand-holding-dollar text-orange-500"></i> KİŞİLERE BORÇLAR</span>
+                        <span id="header-debts-total" class="text-sm font-normal text-gray-500"></span>
+                    </h3>
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr
+                                class="bg-gray-100 text-gray-600 text-[10px] uppercase tracking-wider border-b border-gray-300">
+                                <th class="p-2 w-8 text-center">#</th>
+                                <th class="p-2 w-1/5">Kişi Adı</th>
+                                <th class="p-2 w-1/4">IBAN</th>
+                                <th class="p-2 text-right w-16 text-gray-500">Top. Borç</th>
+                                <th class="p-2 text-right w-20 font-bold text-gray-800 bg-orange-50">Planlanan</th>
+                                <th class="p-2 text-center w-8">Ok</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm text-gray-700">
+                            <!-- Bahadır -->
+                            <tr class="border-b border-gray-200">
+                                <td class="p-2 text-center text-gray-400 text-xs">1</td>
+                                <td class="p-2 font-medium">Bahadır</td>
+                                <td class="p-2 text-[10px] text-gray-400 font-mono">TR__...</td>
+                                <td class="p-2 text-right text-gray-600 font-medium text-xs">3.765 TL</td>
+                                <td class="p-2 text-right font-bold text-gray-800 bg-orange-50 calc-expense"
+                                    data-value="3765">3.765 TL</td>
+                                <td class="p-2 text-center">
+                                    <div class="checkbox-print"></div>
+                                </td>
+                            </tr>
+                            <!-- Umut (Sıralama Güncellendi - Planlanan 2500) -->
+                            <tr class="border-b border-gray-200 bg-slate-50">
+                                <td class="p-2 text-center text-gray-400 text-xs">2</td>
+                                <td class="p-2 font-medium">Umut</td>
+                                <td class="p-2 text-[10px] text-gray-400 font-mono">TR__...</td>
+                                <td class="p-2 text-right text-gray-600 font-medium text-xs">5.000 TL</td>
+                                <td class="p-2 text-right font-bold text-gray-800 bg-orange-50 calc-expense"
+                                    data-value="2500">2.500 TL</td>
+                                <td class="p-2 text-center">
+                                    <div class="checkbox-print"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Bölüm: Diğer Alınacaklar -->
+                <div class="page-break-inside-avoid" id="sec-other-needs">
+                    <h3
+                        class="font-bold text-base border-l-4 border-teal-500 pl-2 mb-2 text-gray-800 flex items-center justify-between pr-2">
+                        <span class="flex items-center gap-2"><i class="fa-solid fa-cart-plus text-teal-500"></i> DİĞER
+                            ALINACAKLAR</span>
+                        <span id="header-other-needs-total" class="text-sm font-normal text-gray-500"></span>
+                    </h3>
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr
+                                class="bg-gray-100 text-gray-600 text-[10px] uppercase tracking-wider border-b border-gray-300">
+                                <th class="p-2 w-8 text-center">#</th>
+                                <th class="p-2">Ürün</th>
+                                <th class="p-2 w-20 text-right">Fiyat</th>
+                                <th class="p-2 w-8"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm text-gray-700">
+                            <tr class="border-b border-gray-200 bg-slate-50">
+                                <td class="p-2 text-center text-gray-400 text-xs">1</td>
+                                <td class="p-2 font-medium">Sarma Sigara (50 Paket)</td>
+                                <td class="p-2 text-right font-bold text-gray-800 calc-expense" data-value="1250">1.250
+                                    TL</td>
+                                <td class="p-2 text-center">
+                                    <div class="checkbox-print"></div>
+                                </td>
+                            </tr>
+                            <tr class="border-b border-gray-200">
+                                <td class="p-2 text-center text-gray-400 text-xs">2</td>
+                                <td class="p-2 font-medium">Yemek (5 GR)</td>
+                                <td class="p-2 text-right font-bold text-gray-800 calc-expense" data-value="8750">8.750
+                                    TL</td>
+                                <td class="p-2 text-center">
+                                    <div class="checkbox-print"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- ÖTELENENLER (Grid İçinde Kaldı - Özet Olarak) -->
+                <div class="page-break-inside-avoid mt-6" id="sec-deferred">
+                    <h3 class="font-bold text-base border-l-4 border-gray-400 pl-2 mb-2 text-gray-600 flex items-center justify-between pr-2">
+                        <span class="flex items-center gap-2"><i class="fa-solid fa-clock-rotate-left text-gray-400"></i> ÖTELENENLER</span>
+                        <span id="header-deferred-total" class="text-xs font-bold text-gray-500 bg-gray-200 px-2 py-0.5 rounded">0,00 TL</span>
+                    </h3>
+                    <div class="rounded border border-gray-200 overflow-hidden">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-gray-50 text-gray-500 text-[10px] uppercase tracking-wider border-b border-gray-200">
+                                    <th class="p-2 w-8 text-center">#</th>
+                                    <th class="p-2">Açıklama / Ürün</th>
+                                    <th class="p-2 text-right">Tutar</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-xs text-gray-500" id="deferred-tbody">
+                                <!-- JS ile doldurulacak -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- TAM GENİŞLİK ALANLARI (GRID DIŞI) -->
+        
+        <!-- Trendyol Listesi -->
+        <div class="page-break-inside-avoid mb-6" id="sec-trendyol">
+            <h3
+                class="font-bold text-base border-l-4 border-indigo-500 pl-2 mb-2 text-gray-800 flex items-center justify-between pr-2">
+                <span class="flex items-center gap-2"><i class="fa-solid fa-list-check text-indigo-500"></i>
+                    TRENDYOL & E-TİCARET</span>
+                <span id="header-trendyol-total" class="text-sm font-normal text-gray-500"></span>
+            </h3>
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr
+                        class="bg-gray-100 text-gray-600 text-[10px] uppercase tracking-wider border-b border-gray-300">
+                        <th class="p-2 w-8 text-center">#</th>
+                        <th class="p-2 w-12 text-center">Görsel</th>
+                        <th class="p-2">Ürün / Hizmet</th>
+                        <th class="p-2 w-20 text-right">Fiyat</th>
+                        <th class="p-2 w-8"></th>
+                    </tr>
+                </thead>
+                <tbody class="text-[10px] text-gray-700" id="trendyol-tbody">
+                    <!-- JS ile doldurulacak -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- MARKET ALIŞVERİŞİ -->
+        <div id="sec-market" class="mb-6">
+            <h3
+                class="font-bold text-base border-l-4 border-purple-500 pl-2 mb-2 text-gray-800 flex items-center justify-between pr-2">
+                <span class="flex items-center gap-2"><i
+                        class="fa-solid fa-basket-shopping text-purple-500"></i> MARKET ALIŞVERİŞİ
+                    (DETAYLI)</span>
+                <span id="header-market-total" class="text-sm font-normal text-gray-500"></span>
+            </h3>
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr
+                        class="bg-gray-100 text-gray-600 text-[10px] uppercase tracking-wider border-b border-gray-300">
+                        <th class="p-2 w-8 text-center">#</th>
+                        <th class="p-2">Ürün & Detay</th>
+                        <th class="p-2 w-12 text-center">Adet</th>
+                        <th class="p-2 w-20 text-right whitespace-nowrap">Birim (TL)</th>
+                        <th class="p-2 w-20 text-right font-bold">Tutar</th>
+                        <th class="p-2 w-6"></th>
+                    </tr>
+                </thead>
+                <tbody class="text-[10px] text-gray-700" id="market-tbody">
+                    <!-- JS ile React datası buraya basılacak -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Alt Not Alanı -->
+        <div class="mt-4 pt-4 border-t-2 border-gray-300 border-dashed page-break-inside-avoid">
+            <h4 class="text-xs font-bold text-gray-600 mb-2 uppercase">Notlar</h4>
+            <div class="w-full min-h-16 border border-gray-200 rounded p-2 bg-white text-gray-700 text-xs">
+                Umut'a 1 gr verilecek 2500 sonraki aya kalacak
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Data Definitions
+        
+        // 1. Ötelenenler Listesi (Manuel + Marketten Gelenler + Trendyoldan Gelenler)
+        const deferredData = [
+            { name: "Tecno Spark 10 Pro", price: 7999.00 },
+            { name: "Simge'ye Borç", price: 1700.00 },
+            { name: "Yılmaz'a Borç", price: 250.00 },
+            { name: "Geçmiş Kira Bakiyesi", price: 10000.00 },
+            { name: "Tecno Spark 30 Pro", price: 9999.00 },
+            { name: "Geçmiş Aidat Bakiyesi", price: 900.00 },
+            { name: "Umut'a Borç Bakiyesi", price: 2500.00 },
+            
+            // Marketten ve Trendyoldan Ötelenenler
+            { name: "Coca-Cola (25 Adet)", price: 2000.00 },
+            { name: "Hane Dostu 6'lı Matkap Fırça Seti", price: 329.00 },
+            { name: "Super-bag 4033 Saklama Kutusu", price: 294.00 },
+            { name: "Speed Out Gravür / Zımpara Seti", price: 265.00 },
+            { name: "Senbang Pimli Mini Cırt", price: 198.00 },
+            { name: "Senbang Dremel Benzeri Freze Uç", price: 246.00 },
+            { name: "PROXTECH 3'lü Bits Uzatma", price: 310.00 },
+            { name: "Bisan Alüminyum Bisiklet Pompası", price: 148.00 },
+            { name: "Rectus Erkay Bisiklet Ön Sepet", price: 299.50 },
+            { name: "Torku Pötibör", price: 84.90 },
+            { name: "Dimes Ananas", price: 60.00 },
+            { name: "Dimes Mango", price: 60.00 },
+            { name: "Sarıyer Kola Şekersiz", price: 42.00 },
+            { name: "Clear Şampuan", price: 199.00 },
+            { name: "Feast Orman Meyvesi", price: 164.90 },
+            { name: "Tukaş Garnitür", price: 39.90 },
+            { name: "Safya Mısırözü Yağı", price: 349.00 },
+            { name: "Sek Rulo Tereyağı", price: 449.00 },
+            { name: "TK Anadolu Barbunya", price: 105.00 },
+            { name: "Türk Şeker 3kg", price: 124.00 },
+            { name: "TK Toz Şeker 2 kg", price: 87.50 },
+            { name: "Fo Çilek Meyveli Dondurma Sosu", price: 99.50 },
+            { name: "Fo Karamelli Dondurma Sosu", price: 99.50 },
+            { name: "Yiltav Yumurta M Boyu 30'lu", price: 169.00 },
+            { name: "Kozlu Yumurta Beyaz 30'lu", price: 87.50 },
+            { name: "TK Tahin 1KG", price: 355.00 },
+            { name: "E.M. Organik Böğürtlen Reçeli", price: 189.90 },
+            { name: "Bingo Soft Lovely", price: 209.90 },
+            { name: "Arko Nem Classic Krem", price: 154.00 },
+            { name: "Privacy EDT Addiction", price: 299.00 },
+            { name: "Mandalina", price: 29.90 },
+            
+            // ÖNCEKİ EKLENENLER
+            { name: "TK Dana Pastırma", price: 175.00 },
+            { name: "Asi Künefe Katmer", price: 54.90 },
+            { name: "Tk Pizza Karışık", price: 124.90 },
+            { name: "TK Pizza Şarküteri Şöleni", price: 139.90 },
+            { name: "Namet Hindi Uzun Sosis 5'li", price: 59.90 },
+            { name: "Namet 7/24 Hindi Sosis", price: 42.90 },
+            { name: "TK Ayçiçek Yağı", price: 79.90 },
+            { name: "Ülker Biskrem Extra Cookie", price: 44.90 },
+            { name: "Luppo Antep Fıstıklı Sandviç Kek", price: 99.90 },
+            { name: "Şefik Usta Kemalpaşa", price: 30.00 },
+            { name: "Pakmaya Krem Şanti Toz", price: 270.00 },
+            { name: "E.M.Organik Vişne Reçeli", price: 154.90 },
+            { name: "TMO Parça Fındıklı Sütlü Fındık Kreması", price: 75.00 },
+            { name: "Peros Sıvı Çam Det. Bakım Renkliler", price: 149.00 },
+            { name: "Mabel Marseille Oda Spreyi", price: 89.90 },
+            { name: "Mabel Marseille Çubuklu Oda Kokusu", price: 89.90 },
+            { name: "Oral-B Cavity Defense Diş Fırçası", price: 89.90 },
+            { name: "Elrana Baharatları Dolmalık Yer Fıstığı", price: 149.99 },
+            { name: "Hilti Kapsül", price: 400.00 },
+            { name: "Black Bruin Pet Enerji", price: 45.00 },
+            { name: "Ülker Saklıköy Sütlü Kremalı 3'lü", price: 49.90 },
+            { name: "Iff's Çikolata Kaplamalı Çilek Dilim", price: 84.90 },
+            { name: "Maret Donuk Soslu Dana Döner", price: 165.00 },
+            { name: "Elit Dev Havlu 1=3", price: 45.00 },
+            { name: "Seğmen Üzüm Pekmezi", price: 124.50 },
+            { name: "Seğmen Tahin", price: 134.50 },
+            { name: "TK Fıstık Ezmesi (Şekersiz)", price: 79.90 },
+            { name: "Becim Kaymak", price: 16.95 },
+            { name: "Tamek Kahvaltılık Sos Acılı", price: 72.90 },
+            { name: "Mantı Atölyesi Donuk Özbek Mantı", price: 119.90 },
+            { name: "Tat Hardal", price: 115.00 },
+            { name: "COMBAT 51 Parça Zımparalama Seti", price: 149.90 },
+            { name: "Flash Çakmak Gazı 270ml", price: 430.00 },
+            { name: "TOYFEST 360 Telefon Tutucu", price: 246.84 },
+            { name: "Şerit Lamba", price: 0.00 },
+            { name: "Italy Style RSS 30 Parça Elmas Uç", price: 189.90 },
+            
+            // SON EKLENENLER (Yetiş, Dr.Oetker, Cheesecake, Mantı)
+            { name: "Yetiş Yumuşatıcı Magical Touch", price: 109.90 },
+            { name: "Dr. Oetker 2 Tavukgöğsü + Kazandibi", price: 49.90 },
+            { name: "Tatlı Kazanı Frambuazlı Cheesecake", price: 149.00 },
+            { name: "Mantıname Dökme Mantı", price: 289.00 },
+            
+            // YENİ EKLENENLER (Köfte, Sucuk)
+            { name: "TK Dana Kasap Köfte", price: 204.90 },
+            { name: "TK Ekmek Arası Sucuk", price: 99.90 }
+        ];
+
+        // 2. Trendyol Listesi (Kalanlar)
+        const trendyolData = [
+            { name: "RİOMİ IPL Buz Lazer Epilasyon", icon: "fa-wand-magic-sparkles", price: 2730.00 },
+            { name: "Proplan Kuzu Etli Köpek Maması", icon: "fa-dog", price: 1000.00 },
+            { name: "Preo MS45 Kulaklık (Siyah)", icon: "fa-headphones", price: 899.00 },
+            { name: "Preo MS45 Kulaklık (Beyaz)", icon: "fa-headphones", price: 899.00 },
+            { name: "SG Dizayn Silikon Tencere Tutacağı (2 Çift)", icon: "fa-kitchen-set", price: 99.00 },
+            { name: "Tafce Matkap Temizlik Fırçası (3 Prç)", icon: "fa-brush", price: 138.73 },
+            { name: "Inox Glance File Metal Çöp Kovası", icon: "fa-trash-can", price: 159.00 },
+            { name: "WUVERA Cam Leke Kazıyıcı", icon: "fa-eraser", price: 49.80 },
+            { name: "Speed Out Mini Taşlama/Oyma Seti", icon: "fa-tools", price: 149.80 },
+            { name: "TMARK 10-in-1 Buharlı Temizlik Mak.", icon: "fa-pump-soap", price: 2591.18 },
+            { name: "Mager Germany 12V Çift Batarya Matkap Seti", icon: "fa-screwdriver", price: 777.76 },
+            { name: "Örel 12x80 Bisiklet Halat Kilit", icon: "fa-lock", price: 148.99 },
+            { name: "ZFN Kelepçeli Bisiklet Dikiz Aynası", icon: "fa-bicycle", price: 248.00 },
+            { name: "Star Plus Çöp Torbası (5 Paket)", icon: "fa-trash", price: 124.86 },
+            { name: "Pallero USB Şarjlı Far Seti", icon: "fa-lightbulb", price: 149.90 },
+            { name: "Tiffany Pürmüz Çakmak 1300°", icon: "fa-fire", price: 78.00 },
+            { name: "Moser Kesim Tarak Seti (4 Adet)", icon: "fa-scissors", price: 149.00 },
+            { name: "Mutfak Köşesi Sharpio Pro Rende", icon: "fa-utensils", price: 299.99 },
+            { name: "Trendyol Plus Aylık Üyelik", icon: "fa-star", price: 1.00 },
+            { name: "Clara Kontes Tüy Dökücü (10 Adet)", icon: "fa-spray-can", price: 91.14 },
+            { name: "Mumcu Sözen Tealight Mum (50 Adet)", icon: "fa-fire", price: 140.00 },
+            { name: "SMARTER Shiny Sprey Mop Seti", icon: "fa-broom", price: 275.57 },
+            { name: "Tiffany Pürmüz Başlığı 1300°", icon: "fa-fire-burner", price: 137.00 },
+            { name: "Camcıbaba 10ml Kalem Şişesi (3 Adet)", icon: "fa-vial", price: 105.00 },
+            { name: "Elektrik Bandı", icon: "fa-tape", price: 0.00 },
+        ];
+
+        // 3. Market Verisi (Kalanlar)
+        const marketData = [
+            // Temel Gıda & Temizlik (Kalanlar)
+            { id: 2, urun: "TK Anadolu Un", marka: "Anadolu", miktar: "5.0 KG", adet: 1, fiyat: 108.50 },
+            { id: 3, urun: "TKS Yarım Yağlı Yoğurt", marka: "Tarım Kredi Süt", miktar: "2.5 KG", adet: 1, fiyat: 89.00 },
+            { id: 4, urun: "Aynes Şeftali Nektarı", marka: "Aynes", miktar: "1.0 LT", adet: 1, fiyat: 39.90 },
+            { id: 5, urun: "Banvit Piliç Bonfile", marka: "Banvit", miktar: "1.0 KG", adet: 1, fiyat: 209.00 },
+            { id: 6, urun: "TK Çekirdeksiz Kuru Üzüm", marka: "Tarım Kredi", miktar: "1.0 KG", adet: 1, fiyat: 189.90 },
+            { id: 7, urun: "Tukaş Mısır Konservesi Eko", marka: "Tukaş", miktar: "450 G", adet: 1, fiyat: 69.90 },
+            { id: 8, urun: "TK Dana Isıl İşlem Görmüş Parmak Sucuk", marka: "Tarım Kredi", miktar: "300 G", adet: 1, fiyat: 175.00 },
+            { id: 9, urun: "Tukaş Ketçap+Mayonez Eko Paket", marka: "Tukaş", miktar: "1.2 KG", adet: 1, fiyat: 89.90 },
+
+            // Kahvaltılık (Kalanlar)
+            { id: 11, urun: "TK Osmancık Pirinç", marka: "Tarım Kredi", miktar: "1.0 KG", adet: 1, fiyat: 69.90 },
+            { id: 12, urun: "TK Riviera Zeytinyağı Pet Şişe", marka: "Tarım Kredi", miktar: "1.0 LT", adet: 1, fiyat: 229.00 },
+            { id: 13, urun: "TK Kakaolu Fındık Kreması (%5)", marka: "Tarım Kredi", miktar: "500 G", adet: 1, fiyat: 69.90 },
+            { id: 18, urun: "Kühne %100 Nar Ekşisi", marka: "Kühne", miktar: "250 ML", adet: 1, fiyat: 129.90 },
+            { id: 20, urun: "Tmo Ayçiçek Yağı 5 LT Dar Ağızlı", marka: "Tmo", miktar: "5.0 LT", adet: 1, fiyat: 375.00 },
+
+            // İçecek & Atıştırmalık (Kalanlar)
+            { id: 22, urun: "Colgate Üçlü Etki Ağız Bakım Suyu", marka: "Colgate", miktar: "500 ML", adet: 1, fiyat: 137.90 },
+            { id: 23, urun: "Kızılay Maden Suyu Karpuz Çilek 6'lı", marka: "Kızılay", miktar: "6x200 ML", adet: 1, fiyat: 65.00 },
+            { id: 29, urun: "Sütaş Süzme Peynir", marka: "Sütaş", miktar: "500 G", adet: 1, fiyat: 109.50 },
+            { id: 30, urun: "TK Dana Sarımsaklı Köfte", marka: "Tarım Kredi", miktar: "320 G", adet: 1, fiyat: 204.90 },
+            // { id: 31, urun: "TK Dana Kasap Köfte", marka: "Tarım Kredi", miktar: "320 G", adet: 1, fiyat: 204.90 },
+            { id: 34, urun: "Ülker Kekstra Mini Çilekli", marka: "Ülker", miktar: "150 G", adet: 1, fiyat: 46.00 },
+
+            // Donuk & Şarküteri (Kalanlar)
+            { id: 36, urun: "Beypiliç Piliç Nugget", marka: "Beypiliç", miktar: "360 G", adet: 1, fiyat: 64.90 },
+            { id: 37, urun: "Namet 7/24 Hindi Salam", marka: "Namet", miktar: "60 G", adet: 1, fiyat: 22.50 },
+            { id: 39, urun: "Erpiliç Tavuk Cordon Bleu", marka: "Erpiliç", miktar: "700 G", adet: 1, fiyat: 149.90 },
+            { id: 41, urun: "TK Dana Izgara Köfte", marka: "Tarım Kredi", miktar: "320 G", adet: 1, fiyat: 204.90 },
+            { id: 42, urun: "Superfresh Pizza King 4'lü", marka: "Superfresh", miktar: "780 G", adet: 1, fiyat: 239.90 },
+            { id: 44, urun: "Superfresh Ispanaklı Peynirli Börek", marka: "Superfresh", miktar: "80 G", adet: 1, fiyat: 30.00 },
+            { id: 46, urun: "Namet Soslu Dana Burger Köfte", marka: "Namet", miktar: "200 G", adet: 1, fiyat: 115.90 },
+            { id: 48, urun: "TK Dondurulmuş Bohça Mantı", marka: "Tarım Kredi", miktar: "400 G", adet: 1, fiyat: 69.90 },
+            { id: 49, urun: "TK Dondurulmuş Parmak Patates", marka: "Tarım Kredi", miktar: "1.0 KG", adet: 1, fiyat: 59.90 },
+            { id: 50, urun: "SF Rulo Börek Ispanaklı", marka: "Superfresh", miktar: "100 G", adet: 1, fiyat: 18.90 },
+            { id: 51, urun: "SF Rulo Börek Peynirli", marka: "Superfresh", miktar: "100 G", adet: 1, fiyat: 19.90 },
+            { id: 52, urun: "SF Muffin Kakaolu", marka: "Superfresh", miktar: "110 G", adet: 1, fiyat: 37.90 },
+            { id: 53, urun: "SF Dondurulmuş Garnitür", marka: "Superfresh", miktar: "2.5 KG", adet: 1, fiyat: 165.00 },
+            // { id: 54, urun: "TK Ekmek Arası Sucuk", marka: "Tarım Kredi", miktar: "130 G", adet: 1, fiyat: 99.90 },
+            { id: 55, urun: "TK Fermente Dana Kangal Sucuk", marka: "Tarım Kredi", miktar: "180 G", adet: 1, fiyat: 139.90 },
+            { id: 56, urun: "TK Hamburger Köfte", marka: "Tarım Kredi", miktar: "360 G", adet: 1, fiyat: 229.90 },
+            { id: 57, urun: "TK Dana Kokteyl Sosis", marka: "Tarım Kredi", miktar: "200 G", adet: 1, fiyat: 82.50 },
+            { id: 58, urun: "TK Dondurulmuş Elma Dilim Patates", marka: "Tarım Kredi", miktar: "1.0 KG", adet: 1, fiyat: 59.90 },
+            { id: 59, urun: "Erp Tavuk Schnitzel", marka: "Erpiliç", miktar: "700 G", adet: 1, fiyat: 129.90 },
+            { id: 61, urun: "Bereket Pişmiş Piliç Döner", marka: "Bereket", miktar: "500 G", adet: 1, fiyat: 185.00 },
+            { id: 62, urun: "SF Poğaça Kaşarlı", marka: "Superfresh", miktar: "70 G", adet: 1, fiyat: 21.00 },
+            { id: 63, urun: "SF Baget 1/3", marka: "Superfresh", miktar: "90 G", adet: 1, fiyat: 16.90 },
+            // { id: 64, urun: "Mantıname Dökme Mantı", marka: "Mantıname", miktar: "1.0 KG", adet: 1, fiyat: 289.00 },
+            { id: 65, urun: "Superfresh Soğan Halka Kroket", marka: "Superfresh", miktar: "450 G", adet: 1, fiyat: 124.90 },
+            { id: 66, urun: "Asi Künefe", marka: "Asi", miktar: "200 G", adet: 1, fiyat: 69.90 },
+            { id: 67, urun: "SF Gül Börek Peynirli", marka: "Superfresh", miktar: "100 G", adet: 1, fiyat: 19.90 },
+            { id: 68, urun: "SF Gül Börek Patatesli", marka: "Superfresh", miktar: "100 G", adet: 1, fiyat: 15.75 },
+            // { id: 69, urun: "Tatlı Kazanı Frambuazlı Cheesecake", marka: "Tatlı Kazanı", miktar: "600 G", adet: 1, fiyat: 149.00 },
+            { id: 71, urun: "Terem Kase Margarin", marka: "Terem", miktar: "250 G", adet: 1, fiyat: 55.00 },
+            { id: 74, urun: "Sabah Paket Margarin", marka: "Sabah", miktar: "250 G", adet: 1, fiyat: 20.75 },
+            { id: 75, urun: "Fellas Mey Bar Antep Fıstıklı (Kutu)", marka: "Fellas", miktar: "40 G", adet: 1, fiyat: 54.95 },
+            { id: 76, urun: "Cipso İnce Yoğurt M.Yeşillikleri", marka: "Cipso", miktar: "130 G", adet: 1, fiyat: 46.00 },
+            { id: 77, urun: "Eti Süt Burger Muzlu", marka: "Eti", miktar: "40 G", adet: 1, fiyat: 18.25 },
+            { id: 78, urun: "Eti Süt Burger", marka: "Eti", miktar: "40 G", adet: 1, fiyat: 18.25 },
+            { id: 80, urun: "Torku Tam Çikolatam Bisküvi", marka: "Torku", miktar: "80 G", adet: 1, fiyat: 27.95 },
+            { id: 81, urun: "Ülker Dankek Magma Karamel", marka: "Ülker", miktar: "70 G", adet: 1, fiyat: 16.90 },
+            { id: 82, urun: "Ülker Dankek Magma Çikolatalı", marka: "Ülker", miktar: "70 G", adet: 1, fiyat: 16.90 },
+            { id: 83, urun: "Ülker Dankek Tart Mini Çilekli", marka: "Ülker", miktar: "150 G", adet: 1, fiyat: 39.90 },
+            { id: 84, urun: "Kinder Süt Dilimi", marka: "Kinder", miktar: "30 G", adet: 1, fiyat: 16.00 },
+            { id: 85, urun: "Uzungil Meyve Aromalı Çifte Kavrulmuş Lokum", marka: "Uzungil", miktar: "180 G", adet: 1, fiyat: 32.90 },
+            { id: 86, urun: "Çerezza Kokteyl", marka: "Çerezza", miktar: "117 G", adet: 1, fiyat: 39.50 },
+            { id: 87, urun: "Miskos Tereyağlı Çekme Helva", marka: "Miskos", miktar: "240 G", adet: 1, fiyat: 79.90 },
+            { id: 88, urun: "Eti Popkek Ahududu", marka: "Eti", miktar: "55 G", adet: 1, fiyat: 12.50 },
+            { id: 89, urun: "Eti Cin Çilekli", marka: "Eti", miktar: "114 G", adet: 1, fiyat: 19.90 },
+            { id: 90, urun: "Master Potato Original Cips", marka: "Master", miktar: "160 G", adet: 1, fiyat: 44.90 },
+            { id: 91, urun: "Şölen Boombastic Fantastik Bar", marka: "Şölen", miktar: "1 Adet", adet: 1, fiyat: 15.90 },
+            { id: 92, urun: "Ülker Çokomel Dev Sade", marka: "Ülker", miktar: "20 G", adet: 1, fiyat: 7.00 },
+            { id: 93, urun: "Ülker Çikolata Kadayıflı Dubai Lezzeti", marka: "Ülker", miktar: "93 G", adet: 1, fiyat: 109.00 },
+            { id: 95, urun: "Torku Meyveli Kek", marka: "Torku", miktar: "40 G", adet: 1, fiyat: 7.90 },
+            { id: 96, urun: "Torku Kakaolu Fındıklı Kek", marka: "Torku", miktar: "40 G", adet: 1, fiyat: 7.90 },
+            { id: 97, urun: "Ülker Piko Kapl.Bar Portakallı", marka: "Ülker", miktar: "20 G", adet: 1, fiyat: 9.75 },
+            { id: 98, urun: "Cheetos Shots MP 3lü", marka: "Cheetos", miktar: "Paket", adet: 1, fiyat: 14.50 },
+            { id: 100, urun: "Oddie Dubai Çikolatası A.Fıstıklı", marka: "Oddie", miktar: "30 G", adet: 1, fiyat: 19.90 },
+            { id: 101, urun: "Sütaş Krema %18 Yağlı", marka: "Sütaş", miktar: "200 ML", adet: 1, fiyat: 39.00 },
+            { id: 102, urun: "İçim Tereyağ", marka: "İçim", miktar: "1000 G", adet: 1, fiyat: 325.00 },
+            { id: 104, urun: "Türk Tarım Baldo Pirinç", marka: "Türk Şeker", miktar: "1.0 KG", adet: 1, fiyat: 52.90 },
+            { id: 105, urun: "TK Pilavlık Bulgur", marka: "Tarım Kredi", miktar: "2.5 KG", adet: 1, fiyat: 97.50 },
+            { id: 106, urun: "Safir İyotlu Kaya Tuzu Tuzluk", marka: "Safir", miktar: "500 G", adet: 1, fiyat: 27.50 },
+            { id: 108, urun: "Uno Büyük Tost Ekmeği", marka: "Uno", miktar: "550 G", adet: 1, fiyat: 69.90 },
+            { id: 110, urun: "Şefik Usta Şekerpare", marka: "Şefik Usta", miktar: "250 G", adet: 1, fiyat: 32.00 },
+            { id: 111, urun: "Untad Premium Hamburger Ekmeği", marka: "Untad", miktar: "510 G", adet: 1, fiyat: 105.00 },
+            { id: 113, urun: "TK Kornişon Turşu", marka: "Tarım Kredi", miktar: "350 G", adet: 1, fiyat: 46.50 },
+            { id: 114, urun: "Uno Geleneksel Lavaş 25 cm", marka: "Uno", miktar: "520 G", adet: 1, fiyat: 54.50 },
+            { id: 116, urun: "Türk Şeker Toz Şeker (5kg)", marka: "Türk Şeker", miktar: "5.0 KG", adet: 1, fiyat: 199.00 },
+            { id: 117, urun: "Mutlu Sebzeli Burgu Makarna", marka: "Mutlu", miktar: "350 G", adet: 1, fiyat: 22.50 },
+            { id: 118, urun: "Dr. Oetker Pirinç Unu", marka: "Dr. Oetker", miktar: "200 G", adet: 1, fiyat: 32.60 },
+            { id: 119, urun: "Dr. Oetker Buğday Nişastası", marka: "Dr. Oetker", miktar: "400 G", adet: 1, fiyat: 62.00 },
+            { id: 120, urun: "Dr. Oetker Mısır Nişastası", marka: "Dr. Oetker", miktar: "400 G", adet: 1, fiyat: 42.80 },
+            { id: 121, urun: "Doğanay %100 Limon Suyu", marka: "Doğanay", miktar: "500 ML", adet: 1, fiyat: 69.90 },
+            { id: 124, urun: "Knorr Çıtır Pane Harcı", marka: "Knorr", miktar: "90 G", adet: 1, fiyat: 32.75 },
+            { id: 125, urun: "E.M Organik Hindistan Cevizi Rendesi", marka: "Ekoloji Market", miktar: "Paket", adet: 1, fiyat: 58.90 },
+            { id: 126, urun: "TK İrmik", marka: "Tarım Kredi", miktar: "500 G", adet: 1, fiyat: 17.50 },
+            { id: 128, urun: "Filiz İnce Uzun Makarna", marka: "Filiz", miktar: "500 G", adet: 1, fiyat: 27.50 },
+            { id: 129, urun: "Filiz Arpa Şehriye", marka: "Filiz", miktar: "500 G", adet: 1, fiyat: 27.50 },
+            { id: 130, urun: "Pakmaya Pudra Şekeri", marka: "Pakmaya", miktar: "200 G", adet: 1, fiyat: 36.50 },
+            { id: 131, urun: "Pakmaya Mısır Nişastası", marka: "Pakmaya", miktar: "200 G", adet: 1, fiyat: 29.00 },
+            { id: 132, urun: "Bizim Mutfak Çorba Ezogelin", marka: "Bizim Mutfak", miktar: "80 G", adet: 1, fiyat: 16.50 },
+            { id: 133, urun: "Tat Sos Ranch", marka: "Tat", miktar: "220 G", adet: 1, fiyat: 89.00 },
+            { id: 134, urun: "Dardanel Ton Balığı Ekonomik", marka: "Dardanel", miktar: "300 G", adet: 1, fiyat: 134.90 },
+            { id: 135, urun: "Tukaş Ketçap (Acılı)", marka: "Tukaş", miktar: "650 G", adet: 1, fiyat: 59.90 },
+            { id: 136, urun: "Safir İyotlu Poşet Tuz", marka: "Safir", miktar: "750 G", adet: 1, fiyat: 10.90 },
+            { id: 137, urun: "Tukaş Basilico Makarna Sosu", marka: "Tukaş", miktar: "360 G", adet: 1, fiyat: 29.90 },
+            { id: 138, urun: "Tukaş Napoliten Makarna Sosu", marka: "Tukaş", miktar: "360 G", adet: 1, fiyat: 29.90 },
+            { id: 139, urun: "Tazepan Tost Ekmeği", marka: "Tazepan", miktar: "670 G", adet: 1, fiyat: 45.00 },
+            // { id: 140, urun: "Dr. Oetker 2 Tavukgöğsü + Kazandibi", marka: "Dr. Oetker", miktar: "400 G", adet: 1, fiyat: 49.90 },
+            { id: 141, urun: "Bagetta Üçgen Yufka", marka: "Bagetta", miktar: "360 G", adet: 1, fiyat: 41.00 },
+            { id: 142, urun: "Pakmaya Meyveli Sos", marka: "Pakmaya", miktar: "80 G", adet: 1, fiyat: 27.00 },
+            { id: 143, urun: "TK Kekik", marka: "Tarım Kredi", miktar: "30 G", adet: 1, fiyat: 18.90 },
+            { id: 144, urun: "TK Sumak", marka: "Tarım Kredi", miktar: "100 G", adet: 1, fiyat: 26.90 },
+            { id: 145, urun: "TK Kırmızı Tatlı Toz Biber", marka: "Tarım Kredi", miktar: "100 G", adet: 1, fiyat: 32.50 },
+            { id: 146, urun: "Ülker Çikolata İstanbul Fındıklı & Çıtır Kadayıflı", marka: "Ülker", miktar: "93 G", adet: 1, fiyat: 79.00 },
+            { id: 147, urun: "Nescafe Gold Eko Paket", marka: "Nescafe", miktar: "100 G", adet: 1, fiyat: 259.50 },
+            { id: 148, urun: "Nescafe Coffee Mate", marka: "Nescafe", miktar: "200 G", adet: 1, fiyat: 119.50 },
+            { id: 149, urun: "Niğde Gazozu", marka: "Niğde", miktar: "250 ML", adet: 1, fiyat: 17.50 },
+            { id: 150, urun: "Black Bruin Enerji İçeceği", marka: "Black Bruin", miktar: "250 ML", adet: 1, fiyat: 35.00 },
+            { id: 152, urun: "Balaban Boza", marka: "Balaban", miktar: "1.0 LT", adet: 1, fiyat: 99.50 },
+            { id: 153, urun: "Uludağ Frutti Extra Orman Meyveli", marka: "Uludağ", miktar: "1.0 LT", adet: 1, fiyat: 44.50 },
+            { id: 154, urun: "Nazo Portakal Aromalı Toz İçecek", marka: "Nazo", miktar: "10 G", adet: 1, fiyat: 9.00 },
+            { id: 155, urun: "Nazo Limon Aromalı Toz İçecek", marka: "Nazo", miktar: "10 G", adet: 1, fiyat: 9.00 },
+            { id: 157, urun: "Peysan Süt Reçeli", marka: "Peysan", miktar: "150 G", adet: 1, fiyat: 37.50 },
+            { id: 160, urun: "Lokman Lezisos Kahvaltılık Sos", marka: "Lokman", miktar: "4.75 TL", adet: 1, fiyat: 4.75 },
+            { id: 162, urun: "Keskinoğlu 30 Lu Small Yumurta", marka: "Keskinoğlu", miktar: "30 Adet", adet: 1, fiyat: 105.00 },
+            { id: 165, urun: "Fiskobirlik Fiskokrem Sütlü", marka: "Fiskobirlik", miktar: "1.0 KG", adet: 1, fiyat: 99.00 },
+            { id: 167, urun: "TK Labne", marka: "Tarım Kredi", miktar: "400 G", adet: 1, fiyat: 85.00 },
+            { id: 168, urun: "Sütaş Burger Peyniri", marka: "Sütaş", miktar: "230 G", adet: 1, fiyat: 119.50 },
+            { id: 169, urun: "Tarsüt Tam Yağlı Kaşar Peyniri", marka: "Tarsüt", miktar: "700 G", adet: 1, fiyat: 255.00 },
+            { id: 170, urun: "Sütaş Süzme Peynir (900g)", marka: "Sütaş", miktar: "900 G", adet: 1, fiyat: 189.00 },
+            { id: 171, urun: "Peysan Sürülebilir Taze Peynir", marka: "Peysan", miktar: "300 G", adet: 1, fiyat: 69.90 },
+            { id: 172, urun: "TK 0.1 Yağlı Süt", marka: "Tarım Kredi", miktar: "1.0 LT", adet: 1, fiyat: 26.00 },
+            { id: 173, urun: "Sarımsak File", marka: "Manav", miktar: "250 G", adet: 1, fiyat: 49.90 },
+            { id: 174, urun: "Salatalık", marka: "Manav", miktar: "1.0 KG", adet: 1, fiyat: 34.90 },
+            { id: 175, urun: "Yeşil Biber", marka: "Manav", miktar: "1.0 KG", adet: 1, fiyat: 44.90 },
+            { id: 176, urun: "Patlıcan", marka: "Manav", miktar: "1.0 KG", adet: 1, fiyat: 47.90 },
+            { id: 177, urun: "Patates", marka: "Manav", miktar: "1.0 KG", adet: 1, fiyat: 10.90 },
+            { id: 178, urun: "Mantar Paket", marka: "Manav", miktar: "400 G", adet: 1, fiyat: 64.90 },
+            { id: 179, urun: "Limon", marka: "Manav", miktar: "1.0 KG", adet: 1, fiyat: 49.90 },
+            { id: 180, urun: "Kuru Soğan", marka: "Manav", miktar: "1.0 KG", adet: 1, fiyat: 9.50 },
+            { id: 181, urun: "Domates", marka: "Manav", miktar: "1.0 KG", adet: 1, fiyat: 34.90 },
+            { id: 182, urun: "Silen Tuvalet Kağıdı 2 Katlı 32'li", marka: "Silen", miktar: "32 Adet", adet: 1, fiyat: 149.00 },
+            { id: 183, urun: "Silen Kağıt Havlu 12'li", marka: "Silen", miktar: "12 Adet", adet: 1, fiyat: 109.90 },
+            { id: 185, urun: "HighGenic Sprey Fırın Ocak Temizleyici", marka: "HighGenic", miktar: "500 ML", adet: 1, fiyat: 69.90 },
+            { id: 186, urun: "Renax Bulaşık Makinesi Kapsülü", marka: "Renax", miktar: "33 Adet", adet: 1, fiyat: 159.90 },
+            // { id: 187, urun: "Yetiş Yumuşatıcı Magical Touch", marka: "Yetiş", miktar: "4.0 KG", adet: 1, fiyat: 109.90 },
+            { id: 188, urun: "Elit Çamaşır Suyu", marka: "Elit", miktar: "2.5 LT", adet: 1, fiyat: 49.90 },
+            { id: 189, urun: "Elit Bulaşık Makinesi Parlatıcı", marka: "Elit", miktar: "450 G", adet: 1, fiyat: 29.90 },
+            { id: 191, urun: "Parex Magic Sünger Tekli", marka: "Parex", miktar: "1 Adet", adet: 1, fiyat: 29.90 },
+            { id: 193, urun: "Renax Sıvı Det. Siyahlar", marka: "Renax", miktar: "2.5 LT", adet: 1, fiyat: 109.90 },
+            { id: 194, urun: "Renax Sıvı Det. Beyazlar", marka: "Renax", miktar: "2.5 LT", adet: 1, fiyat: 109.90 },
+            { id: 195, urun: "Peros Yumuşatıcı Pembe Güller", marka: "Peros", miktar: "5.0 LT", adet: 1, fiyat: 125.90 },
+            { id: 196, urun: "Süper Bright Ovma Teli 4 Lü", marka: "Süperbright", miktar: "4 Adet", adet: 1, fiyat: 27.50 },
+            { id: 197, urun: "Microll Mikrofiber Havlu 3 Lü", marka: "Microll", miktar: "3 Adet", adet: 1, fiyat: 58.90 },
+            { id: 198, urun: "Rosense Vazelin", marka: "Gülbirlik", miktar: "100 ML", adet: 1, fiyat: 49.90 },
+            { id: 202, urun: "New City Hijyenik Kürdan 200'lü", marka: "New City", miktar: "1 Adet", adet: 1, fiyat: 32.90 },
+            { id: 205, urun: "Tuborg Gold", marka: "Tuborg", miktar: "50 CL", adet: 30, fiyat: 75.00 },
+            { id: 207, urun: "Kamagra Jel", marka: "Kamagra", miktar: "Paket", adet: 1, fiyat: 300.00 },
+            { id: 209, urun: "Microll Mikrofiber Bez Baskılı 3'lü", marka: "Microll", miktar: "3 Adet", adet: 1, fiyat: 58.90 },
+            { id: 210, urun: "Fe Balm Dudak Lip", marka: "Fe", miktar: "10 G", adet: 1, fiyat: 39.90 },
+            { id: 211, urun: "Kabak", marka: "Manav", miktar: "1.0 KG", adet: 1, fiyat: 35.00 },
+        ];
+
+        // Market Tablosunu Oluştur
+        function initMarketTable() {
+            renderMarketTable();
+            renderTrendyolTable();
+            renderDeferredTable();
+            calculateTotals();
+        }
+
+        function renderMarketTable() {
+            const tbody = document.getElementById('market-tbody');
+            tbody.innerHTML = '';
+            marketData.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.className = `border-b border-gray-100 market-table-row ${index % 2 !== 0 ? 'bg-slate-50' : ''}`;
+                const initialTotal = item.fiyat * item.adet;
+                tr.innerHTML = `
+                    <td class="p-2 text-center text-gray-400">${index + 1}</td>
+                    <td class="p-2">
+                        <span class="font-medium text-gray-800">${item.urun}</span>
+                        <span class="market-brand">${item.marka} - ${item.miktar}</span>
+                    </td>
+                    <td class="p-2 text-center">
+                        <input type="number" value="${item.adet}" min="0" class="input-calc w-10 text-center text-xs market-qty font-bold text-gray-700" oninput="updateRow(this)">
+                    </td>
+                    <td class="p-2 text-right">
+                        <input type="number" step="0.01" value="${item.fiyat}" class="input-calc w-16 text-right text-xs market-price text-gray-600" oninput="updateRow(this)">
+                    </td>
+                    <td class="p-2 text-right font-bold text-gray-800 row-total calc-expense" data-value="${initialTotal.toFixed(2)}">${formatMoney(initialTotal)}</td>
+                    <td class="p-2 text-center"><div class="checkbox-print"></div></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderTrendyolTable() {
+            const tbody = document.getElementById('trendyol-tbody');
+            tbody.innerHTML = '';
+            trendyolData.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.className = `border-b border-gray-100 ${index % 2 !== 0 ? 'bg-slate-50' : ''}`;
+                tr.innerHTML = `
+                    <td class="p-2 text-center text-gray-400">${index + 1}</td>
+                    <td class="p-2 text-center"><i class="fa-solid ${item.icon} text-gray-300"></i></td>
+                    <td class="p-2 font-medium">${item.name}</td>
+                    <td class="p-2 text-right font-bold text-gray-800 calc-expense" data-value="${item.price}">${formatMoney(item.price)}</td>
+                    <td class="p-2 text-center"><div class="checkbox-print"></div></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderDeferredTable() {
+            const tbody = document.getElementById('deferred-tbody');
+            tbody.innerHTML = '';
+            deferredData.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.className = `border-b border-gray-100 ${index % 2 !== 0 ? 'bg-slate-50' : ''}`;
+                tr.innerHTML = `
+                    <td class="p-2 text-center">${index + 1}</td>
+                    <td class="p-2 font-medium">${item.name}</td>
+                    <td class="p-2 text-right deferred-item" data-value="${item.price}">${formatMoney(item.price)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function formatMoney(amount) {
+            return amount.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' TL';
+        }
+
+        function updateRow(input) {
+            const row = input.closest('tr');
+            const price = parseFloat(row.querySelector('.market-price').value) || 0;
+            const qty = parseFloat(row.querySelector('.market-qty').value) || 0;
+            const total = price * qty;
+
+            const totalEl = row.querySelector('.row-total');
+            totalEl.innerText = formatMoney(total);
+            totalEl.setAttribute('data-value', total);
+
+            calculateTotals();
+        }
+
+        function calculateTotals() {
+            // Gelir
+            const dollarRate = 42.44;
+            const rentUSD = 2215;
+            const totalIncome = rentUSD * dollarRate;
+
+            document.getElementById('total-income').innerText = formatMoney(totalIncome);
+            document.getElementById('header-income-total').innerText = 'Toplam: ' + formatMoney(totalIncome);
+
+            // 1. Ana Giderlerin Hesaplanması
+            const expenseSections = [
+                { id: 'sec-fixed', headerId: 'header-fixed-total' },
+                { id: 'sec-other', headerId: 'header-other-total' },
+                { id: 'sec-debts', headerId: 'header-debts-total' },
+                { id: 'sec-market', headerId: 'header-market-total' },
+                { id: 'sec-other-needs', headerId: 'header-other-needs-total' },
+                { id: 'sec-trendyol', headerId: 'header-trendyol-total' },
+                { id: 'sec-overdue', headerId: 'header-overdue-total' }
+            ];
+
+            let grandTotalExpense = 0;
+
+            expenseSections.forEach(sec => {
+                const container = document.getElementById(sec.id);
+                if (container) {
+                    let secTotal = 0;
+                    const items = container.querySelectorAll('.calc-expense');
+
+                    items.forEach(item => {
+                        const val = parseFloat(item.getAttribute('data-value'));
+                        if (!isNaN(val)) {
+                            secTotal += val;
+                        }
+                    });
+
+                    grandTotalExpense += secTotal;
+
+                    // Header'ı güncelle
+                    const headerEl = document.getElementById(sec.headerId);
+                    if (headerEl) {
+                        headerEl.innerText = 'Toplam: ' + formatMoney(secTotal);
+                    }
+                }
+            });
+
+            document.getElementById('total-expense').innerText = formatMoney(grandTotalExpense);
+
+            // 2. Ötelenenlerin Ayrı Hesaplanması
+            let deferredTotal = 0;
+            deferredData.forEach(item => {
+                deferredTotal += item.price;
+            });
+            document.getElementById('header-deferred-total').innerText = 'Toplam: ' + formatMoney(deferredTotal);
+
+
+            // Net Durum
+            const net = totalIncome - grandTotalExpense;
+            const netEl = document.getElementById('net-status');
+            netEl.innerText = formatMoney(net);
+
+            if (net < 0) {
+                netEl.classList.add('text-red-600');
+                netEl.classList.remove('text-gray-800', 'text-green-600');
+            } else {
+                netEl.classList.add('text-green-600');
+                netEl.classList.remove('text-gray-800', 'text-red-600');
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xtreme Ödeme Planlayıcısı</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Poppins', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        dark: {
+                            950: '#050505',
+                            900: '#0f1014',
+                            800: '#151921',
+                            700: '#232732',
+                        },
+                        brand: {
+                            cyan: '#22d3ee',
+                            purple: '#8b5cf6',
+                            rose: '#f43f5e'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
+
+    <style>
+        body { 
+            font-family: 'Poppins', sans-serif; 
+            background-color: #050505;
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f1014; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+
+        .chart-wrapper { position: relative; height: 300px; width: 100%; }
+
+        .glass-panel {
+            background-color: #151921;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.3);
+        }
+        
+        .text-gradient {
+            background: linear-gradient(to right, #22d3ee, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Date Input Styling for Dark Mode */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1) opacity(0.5);
+            cursor: pointer;
+        }
+        
+        /* Table Row Hover Gradient */
+        .hover-gradient:hover {
+            background: linear-gradient(90deg, rgba(34,211,238,0.03) 0%, rgba(139,92,246,0.03) 100%);
+        }
+        
+        /* Select Styling */
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-dark-950 dark:text-gray-300 min-h-screen flex flex-col transition-colors duration-300">
+
+    <!-- Header -->
+    <header class="bg-white/80 dark:bg-dark-950/80 border-b border-slate-200 dark:border-white/5 sticky top-0 z-40 backdrop-blur-md">
+        <div class="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-gradient-to-br from-brand-cyan to-brand-purple p-2.5 rounded-xl text-white shadow-lg shadow-purple-900/20">
+                    <span class="material-symbols-outlined text-xl">account_balance_wallet</span>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight text-slate-800 dark:text-white">Finans<span class="text-gradient">Master</span></h1>
+                    <p class="text-[11px] text-slate-500 dark:text-gray-500 font-medium tracking-wider uppercase">Ödeme Planlayıcısı</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="hidden md:flex flex-col items-end mr-4">
+                    <span class="text-[10px] text-slate-500 font-bold uppercase">Toplam Borç</span>
+                    <span id="header-total" class="text-lg font-bold text-rose-500 font-mono">0 TL</span>
+                </div>
+                <button onclick="toggleTheme()" class="p-2.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-all">
+                    <span class="material-symbols-outlined theme-icon">light_mode</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow p-4 sm:p-6 lg:p-8 max-w-[1800px] mx-auto w-full space-y-6">
+
+        <!-- 1. KPI Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <!-- Kalan Bakiye -->
+            <div class="glass-panel p-5 rounded-2xl flex items-center gap-4 border-l-4 border-rose-500">
+                <div class="p-3 bg-rose-500/10 text-rose-500 rounded-xl">
+                    <span class="material-symbols-outlined">payments</span>
+                </div>
+                <div>
+                    <p class="text-[10px] text-slate-500 dark:text-gray-500 font-bold uppercase">Kalan Toplam Borç</p>
+                    <h3 class="text-2xl font-bold text-slate-800 dark:text-gray-100 font-mono" id="stat-remaining">0 TL</h3>
+                </div>
+            </div>
+
+            <!-- Bu Ay Ödenecek -->
+            <div class="glass-panel p-5 rounded-2xl flex items-center gap-4 border-l-4 border-brand-cyan">
+                <div class="p-3 bg-cyan-500/10 text-cyan-500 rounded-xl">
+                    <span class="material-symbols-outlined">calendar_month</span>
+                </div>
+                <div>
+                    <p class="text-[10px] text-slate-500 dark:text-gray-500 font-bold uppercase">Bu Ay Planlanan</p>
+                    <h3 class="text-2xl font-bold text-slate-800 dark:text-gray-100 font-mono" id="stat-monthly">0 TL</h3>
+                </div>
+            </div>
+
+            <!-- Kritik Ödemeler -->
+            <div class="glass-panel p-5 rounded-2xl flex items-center gap-4 border-l-4 border-orange-500">
+                <div class="p-3 bg-orange-500/10 text-orange-500 rounded-xl">
+                    <span class="material-symbols-outlined">priority_high</span>
+                </div>
+                <div>
+                    <p class="text-[10px] text-slate-500 dark:text-gray-500 font-bold uppercase">Kritik Ödemeler</p>
+                    <h3 class="text-2xl font-bold text-slate-800 dark:text-gray-100 font-mono" id="stat-critical">0</h3>
+                </div>
+            </div>
+
+            <!-- Tamamlanan -->
+            <div class="glass-panel p-5 rounded-2xl flex items-center gap-4 border-l-4 border-green-500">
+                <div class="p-3 bg-green-500/10 text-green-500 rounded-xl">
+                    <span class="material-symbols-outlined">check_circle</span>
+                </div>
+                <div>
+                    <p class="text-[10px] text-slate-500 dark:text-gray-500 font-bold uppercase">Ödenen Kalemler</p>
+                    <h3 class="text-2xl font-bold text-slate-800 dark:text-gray-100 font-mono" id="stat-paid">0</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Grafikler -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Scatter: Önem vs Maliyet -->
+            <div class="glass-panel p-6 rounded-2xl lg:col-span-2">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-slate-800 dark:text-gray-100 flex items-center gap-2">
+                        <span class="w-2 h-6 bg-brand-cyan rounded-full"></span>
+                        Ödeme Öncelik Matrisi
+                    </h2>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="scatterChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Doughnut: Durum Dağılımı -->
+            <div class="glass-panel p-6 rounded-2xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-slate-800 dark:text-gray-100 flex items-center gap-2">
+                        <span class="w-2 h-6 bg-brand-purple rounded-full"></span>
+                        Sahiplik Dağılımı
+                    </h2>
+                </div>
+                <div class="chart-wrapper flex justify-center">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Veri Tablosu -->
+        <div class="glass-panel rounded-2xl overflow-hidden flex flex-col">
+            <!-- Toolbar -->
+            <div class="p-5 border-b border-slate-200 dark:border-white/5 flex flex-wrap gap-4 justify-between items-center bg-slate-50/50 dark:bg-dark-900/50">
+                <div class="flex items-center gap-4">
+                    <h2 class="font-bold text-slate-700 dark:text-gray-200 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-brand-cyan">list_alt</span>
+                        Ödeme Listesi
+                    </h2>
+                    <!-- Arama -->
+                    <div class="relative group">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg material-symbols-outlined">search</span>
+                        <input type="text" id="search-input" placeholder="Borç veya Kategori ara..." class="pl-10 pr-4 py-2 text-sm bg-white dark:bg-dark-900 border border-slate-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-brand-cyan/50 outline-none w-64 transition-all">
+                    </div>
+                </div>
+                
+                <!-- Yeni Ekle Butonu -->
+                <button onclick="addNewRow()" class="flex items-center gap-2 px-4 py-2 bg-brand-cyan text-black font-semibold rounded-xl hover:bg-cyan-300 transition-colors">
+                    <span class="material-symbols-outlined text-sm">add</span> Yeni Ekle
+                </button>
+            </div>
+
+            <!-- Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100 dark:bg-dark-900 text-xs uppercase tracking-wider text-slate-500 dark:text-gray-500 font-semibold border-b border-slate-200 dark:border-white/5">
+                            <th class="p-4 w-12 text-center">Sıra</th>
+                            <th class="p-4 min-w-[180px]">Borç / Açıklama</th>
+                            <th class="p-4 w-32">Kategori</th>
+                            <th class="p-4 w-32">Sahibi</th>
+                            <th class="p-4 w-20 text-center">Önem<br><span class="text-[9px] opacity-70">(1-5)</span></th>
+                            <th class="p-4 w-20 text-center">Maliyet<br><span class="text-[9px] opacity-70">(1-5)</span></th>
+                            <th class="p-4 w-24 text-center">Skor</th>
+                            <th class="p-4 w-32 text-right">Tutar</th>
+                            <th class="p-4 w-32 text-center">Vadesi</th>
+                            <th class="p-4 w-16 text-center">Durum</th>
+                            <th class="p-4 w-12 text-center">Sil</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body" class="text-sm text-slate-700 dark:text-gray-300 divide-y divide-slate-100 dark:divide-white/5">
+                        <!-- JS ile doldurulacak -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Empty State -->
+            <div id="empty-state" class="hidden p-12 text-center flex-col items-center justify-center text-slate-400 dark:text-gray-600">
+                <span class="material-symbols-outlined text-5xl mb-2 opacity-50">inbox</span>
+                <p>Listenizde ödeme bulunmamaktadır.</p>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // --- Yapılandırma ve Veri ---
+        const today = new Date().toISOString().split('T')[0];
+        
+        // Sabit Seçenekler
+        const CATEGORIES = ["Banka", "Şahsi Borç", "Şirket Borcu", "İcra Dosyaları", "Vergi", "SGK", "Fatura/Diğer"];
+        const OWNERS = ["Şahıs", "Timdesigners", "Rentakar"];
+
+        // Yeni Veri Seti (İcra, Kredi, Vergi ve Şahsi Borçlar Dahil)
+        const specificData = [
+            // --- 1. İcra Dosyaları ---
+            { id: 1, name: "Fatma Bolat İcra Dosyası", category: "İcra Dosyaları", owner: "Şahıs", importance: 5, costImpact: 5, amount: 601677.00, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 2, name: "Özşanal İcra Dosyası", category: "İcra Dosyaları", owner: "Şahıs", importance: 5, costImpact: 5, amount: 294614.00, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 3, name: "Yapı Kredi Kanuni Takip", category: "Banka", owner: "Şahıs", importance: 5, costImpact: 5, amount: 238000.00, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 4, name: "Grenke Kiralama İcra", category: "İcra Dosyaları", owner: "Şahıs", importance: 5, costImpact: 5, amount: 115772.00, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 5, name: "E-ofis İcra Dosyası", category: "İcra Dosyaları", owner: "Timdesigners", importance: 5, costImpact: 3, amount: 28936.00, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 6, name: "Evkur İcra Dosyası", category: "İcra Dosyaları", owner: "Şahıs", importance: 5, costImpact: 3, amount: 25003.00, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 7, name: "Vodafone İcra Dosyası", category: "İcra Dosyaları", owner: "Şahıs", importance: 5, costImpact: 3, amount: 22000.00, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 8, name: "Pronet İcra Dosyası", category: "İcra Dosyaları", owner: "Şahıs", importance: 5, costImpact: 2, amount: 20000.00, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 9, name: "Fors AVM İcra Dosyası", category: "İcra Dosyaları", owner: "Şahıs", importance: 5, costImpact: 2, amount: 17095.47, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 10, name: "Turksat İcra Dosyası", category: "İcra Dosyaları", owner: "Şahıs", importance: 5, costImpact: 1, amount: 7602.42, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 11, name: "Superonline İcra Dosyası", category: "İcra Dosyaları", owner: "Şahıs", importance: 5, costImpact: 1, amount: 5000.00, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 12, name: "Reel Alacak - Türkcell İcra", category: "İcra Dosyaları", owner: "Şahıs", importance: 5, costImpact: 1, amount: 3113.64, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 13, name: "Türkcell İcra Dosyası", category: "İcra Dosyaları", owner: "Şahıs", importance: 5, costImpact: 1, amount: 2534.00, dueDate: today, plannedDate: today, isPaid: false },
+
+            // --- 2. Banka Borçları ---
+            { id: 14, name: "Güven Kredi", category: "Banka", owner: "Şahıs", importance: 5, costImpact: 4, amount: 30000.00, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 15, name: "Garanti Rentakar Kredi Kartı", category: "Banka", owner: "Rentakar", importance: 5, costImpact: 3, amount: 25000.00, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 16, name: "Aktif Bank Kredi - 2", category: "Banka", owner: "Şahıs", importance: 4, costImpact: 2, amount: 15000.00, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 17, name: "Aktif Bank Kredi - 1", category: "Banka", owner: "Şahıs", importance: 4, costImpact: 1, amount: 10000.00, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 18, name: "Garanti Bireysel Kredi Kartı", category: "Banka", owner: "Şahıs", importance: 4, costImpact: 1, amount: 4000.00, dueDate: today, plannedDate: today, isPaid: false },
+
+            // --- 3. Vergi & SGK ---
+            { id: 19, name: "Timdesigners SGK Borcu", category: "SGK", owner: "Timdesigners", importance: 5, costImpact: 5, amount: 300000.00, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 20, name: "Timdesigners Vergi Borcu", category: "Vergi", owner: "Timdesigners", importance: 5, costImpact: 5, amount: 148314.18, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 21, name: "Bağkur Yapılandırma", category: "SGK", owner: "Şahıs", importance: 5, costImpact: 4, amount: 52368.50, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 22, name: "Rentakar Vergi Borcu", category: "Vergi", owner: "Rentakar", importance: 5, costImpact: 2, amount: 10000.00, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 23, name: "Şahsi Vergi Borcu", category: "Vergi", owner: "Şahıs", importance: 5, costImpact: 2, amount: 9541.00, dueDate: today, plannedDate: today, isPaid: false },
+
+            // --- 4. Şahıs Borçları ---
+            { id: 24, name: "Yunus Baki (Bakiye)", category: "Şahsi Borç", owner: "Şahıs", importance: 5, costImpact: 5, amount: 250000.00, dueDate: "2025-11-30", plannedDate: "2025-11-30", isPaid: false },
+            { id: 25, name: "Serkan Işık", category: "Şahsi Borç", owner: "Şahıs", importance: 5, costImpact: 4, amount: 55000.00, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 26, name: "Market Cemal Abi", category: "Şahsi Borç", owner: "Şahıs", importance: 5, costImpact: 4, amount: 30000.00, dueDate: "2025-09-30", plannedDate: "2025-09-30", isPaid: false },
+            { id: 27, name: "Yalçın Yıldırım", category: "Şahsi Borç", owner: "Şahıs", importance: 5, costImpact: 2, amount: 10000.00, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 28, name: "Teyze (Kalan)", category: "Şahsi Borç", owner: "Şahıs", importance: 5, costImpact: 2, amount: 3500.00, dueDate: "2025-09-05", plannedDate: "2025-09-05", isPaid: false },
+            { id: 29, name: "Turgut (Kalan)", category: "Şahsi Borç", owner: "Şahıs", importance: 5, costImpact: 1, amount: 250.00, dueDate: "2025-09-05", plannedDate: "2025-09-05", isPaid: false },
+            { id: 30, name: "Simge", category: "Şahsi Borç", owner: "Şahıs", importance: 3, costImpact: 1, amount: 1000.00, dueDate: "2025-09-05", plannedDate: "2025-09-05", isPaid: false },
+            { id: 31, name: "Serkan Özbekalp", category: "Şahsi Borç", owner: "Şahıs", importance: 3, costImpact: 1, amount: 250.00, dueDate: "2025-09-05", plannedDate: "2025-09-05", isPaid: false },
+            { id: 32, name: "Avukat Vural", category: "Şahsi Borç", owner: "Şahıs", importance: 5, costImpact: 5, amount: 50000.00, dueDate: "2025-10-30", plannedDate: "2025-10-30", isPaid: false },
+
+            // --- 5. Korunan: Ticaret Odası Aidatları ---
+            { id: 40, name: "Rentakar DTO - 2022/1", category: "Şirket Borcu", owner: "Rentakar", importance: 4, costImpact: 2, amount: 1122.38, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 41, name: "Rentakar DTO - 2022/2", category: "Şirket Borcu", owner: "Rentakar", importance: 4, costImpact: 2, amount: 1054.13, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 42, name: "Rentakar DTO - 2023/1", category: "Şirket Borcu", owner: "Rentakar", importance: 4, costImpact: 2, amount: 1492.43, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 43, name: "Rentakar DTO - 2023/2", category: "Şirket Borcu", owner: "Rentakar", importance: 4, costImpact: 2, amount: 1367.43, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 44, name: "Timdesigners İTO - 2022/1", category: "Şirket Borcu", owner: "Timdesigners", importance: 4, costImpact: 2, amount: 1122.38, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 45, name: "Timdesigners İTO - 2022/2", category: "Şirket Borcu", owner: "Timdesigners", importance: 4, costImpact: 2, amount: 1054.13, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 46, name: "Timdesigners İTO - 2023/1", category: "Şirket Borcu", owner: "Timdesigners", importance: 4, costImpact: 2, amount: 1492.43, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 47, name: "Timdesigners İTO - 2023/2", category: "Şirket Borcu", owner: "Timdesigners", importance: 4, costImpact: 2, amount: 1367.43, dueDate: today, plannedDate: today, isPaid: false },
+
+            // --- 6. 0 TL'lik Kalemler ---
+            { id: 50, name: "İnternet", category: "Fatura/Diğer", owner: "Şahıs", importance: 3, costImpact: 1, amount: 0, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 51, name: "Telefon", category: "Fatura/Diğer", owner: "Şahıs", importance: 3, costImpact: 1, amount: 0, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 52, name: "Denizbank Platinum", category: "Banka", owner: "Şahıs", importance: 3, costImpact: 1, amount: 0, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 53, name: "Garanti M&S Platinum", category: "Banka", owner: "Şahıs", importance: 3, costImpact: 1, amount: 0, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 54, name: "Turkcell - Adana 13. İcra", category: "İcra Dosyaları", owner: "Şahıs", importance: 3, costImpact: 1, amount: 0, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 55, name: "Vodafone - Mersin 5. İcra", category: "İcra Dosyaları", owner: "Şahıs", importance: 3, costImpact: 1, amount: 0, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 56, name: "Otoyol A.Ş.", category: "Şirket Borcu", owner: "Rentakar", importance: 3, costImpact: 1, amount: 0, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 57, name: "Turk Telekom", category: "Fatura/Diğer", owner: "Şahıs", importance: 3, costImpact: 1, amount: 0, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 58, name: "Turkcell Rentakar", category: "Fatura/Diğer", owner: "Rentakar", importance: 3, costImpact: 1, amount: 0, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 59, name: "Ev Kirası", category: "Fatura/Diğer", owner: "Şahıs", importance: 3, costImpact: 1, amount: 0, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 60, name: "SSK - Bağkur", category: "SGK", owner: "Şahıs", importance: 3, costImpact: 1, amount: 0, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 61, name: "TTNET", category: "Fatura/Diğer", owner: "Şahıs", importance: 3, costImpact: 1, amount: 0, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 62, name: "Gediz", category: "Fatura/Diğer", owner: "Şahıs", importance: 3, costImpact: 1, amount: 0, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 63, name: "ICA İçtaş Altyapı Yavuz SS Köprüsü", category: "İcra Dosyaları", owner: "Şahıs", importance: 3, costImpact: 1, amount: 0, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 64, name: "Extranet İletişim Hizmetleri A.Ş.", category: "İcra Dosyaları", owner: "Şahıs", importance: 3, costImpact: 1, amount: 0, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 65, name: "KMO Anadolu Otoyol İşletmesi A.Ş.", category: "İcra Dosyaları", owner: "Şahıs", importance: 3, costImpact: 1, amount: 0, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 66, name: "Mehmet Önel, Yusuf Önel, Öz Şanal İcra", category: "İcra Dosyaları", owner: "Şahıs", importance: 3, costImpact: 1, amount: 0, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 67, name: "Sarıçelik Ticaret", category: "İcra Dosyaları", owner: "Şahıs", importance: 3, costImpact: 1, amount: 0, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 68, name: "Otoyol Yatırım ve İşletme A.Ş.", category: "İcra Dosyaları", owner: "Şahıs", importance: 3, costImpact: 1, amount: 0, dueDate: today, plannedDate: today, isPaid: false },
+            { id: 69, name: "Erg Otoyol Yatırım ve İşletme A.Ş.", category: "İcra Dosyaları", owner: "Şahıs", importance: 3, costImpact: 1, amount: 0, dueDate: today, plannedDate: today, isPaid: false }
+        ];
+
+        // V6 anahtarı ile yeni veriyi zorluyoruz
+        let appData = JSON.parse(localStorage.getItem('paymentPlannerDataV6')) || specificData;
+        
+        // Eğer veri boşsa veya eski veri varsa yenisini yükle
+        if (appData.length === 0 || !localStorage.getItem('paymentPlannerDataV6')) {
+            appData = specificData;
+            localStorage.setItem('paymentPlannerDataV6', JSON.stringify(appData));
+        }
+
+        let charts = {};
+
+        // --- Yardımcı Fonksiyonlar ---
+        function formatMoney(amount) {
+            return new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 }).format(amount) + ' TL';
+        }
+
+        function calculateScore(item) {
+            return ((item.importance + item.costImpact) / 2).toFixed(1);
+        }
+
+        function getScoreBadge(score) {
+            const s = parseFloat(score);
+            if (s >= 4.5) return { label: 'KRİTİK', class: 'bg-rose-500/20 text-rose-500 border border-rose-500/30' };
+            if (s >= 3.5) return { label: 'YÜKSEK', class: 'bg-orange-500/20 text-orange-500 border border-orange-500/30' };
+            if (s >= 2.5) return { label: 'ORTA', class: 'bg-brand-cyan/20 text-brand-cyan border border-brand-cyan/30' };
+            return { label: 'DÜŞÜK', class: 'bg-slate-500/20 text-slate-500 border border-slate-500/30' };
+        }
+
+        // --- Ana Fonksiyonlar ---
+        function updateStats() {
+            const activeItems = appData.filter(i => !i.isPaid);
+            const paidItems = appData.filter(i => i.isPaid);
+            
+            const totalDebt = activeItems.reduce((acc, i) => acc + i.amount, 0);
+            
+            const currentMonth = new Date().toISOString().slice(0, 7); 
+            const monthlyDebt = activeItems.filter(i => i.plannedDate.startsWith(currentMonth)).reduce((acc, i) => acc + i.amount, 0);
+            
+            const criticalCount = activeItems.filter(i => i.importance >= 4).length;
+
+            document.getElementById('header-total').innerText = formatMoney(totalDebt);
+            document.getElementById('stat-remaining').innerText = formatMoney(totalDebt);
+            document.getElementById('stat-monthly').innerText = formatMoney(monthlyDebt);
+            document.getElementById('stat-critical').innerText = criticalCount;
+            document.getElementById('stat-paid').innerText = paidItems.length;
+
+            localStorage.setItem('paymentPlannerDataV6', JSON.stringify(appData));
+            updateCharts();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+            
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            
+            // Filtreleme ve Sıralama
+            const filtered = appData
+                .filter(item => 
+                    item.name.toLowerCase().includes(searchTerm) || 
+                    item.category.toLowerCase().includes(searchTerm) || 
+                    item.owner.toLowerCase().includes(searchTerm)
+                )
+                .sort((a, b) => {
+                    // 0 TL olanlar en sona
+                    if (a.amount === 0 && b.amount > 0) return 1;
+                    if (b.amount === 0 && a.amount > 0) return -1;
+
+                    if (a.isPaid === b.isPaid) return new Date(a.dueDate) - new Date(b.dueDate);
+                    return a.isPaid ? 1 : -1;
+                });
+
+            if (filtered.length === 0) {
+                document.getElementById('empty-state').classList.remove('hidden');
+                document.getElementById('empty-state').classList.add('flex');
+            } else {
+                document.getElementById('empty-state').classList.add('hidden');
+                document.getElementById('empty-state').classList.remove('flex');
+            }
+
+            filtered.forEach((item, index) => {
+                const score = calculateScore(item);
+                const badge = getScoreBadge(score);
+                const isOverdue = !item.isPaid && new Date(item.dueDate) < new Date(today) && item.amount > 0;
+                
+                let rowClass = "hover-gradient group transition-all border-b border-slate-100 dark:border-white/5 last:border-0";
+                if (item.isPaid) rowClass += " bg-slate-50 dark:bg-dark-900/40 opacity-50 grayscale";
+                if (item.amount === 0) rowClass += " opacity-60"; // 0 TL olanları biraz soluk yap
+                
+                const row = document.createElement('tr');
+                row.className = rowClass;
+                
+                // Select Options Generators
+                const categoryOptions = CATEGORIES.map(c => `<option value="${c}" ${item.category === c ? 'selected' : ''}>${c}</option>`).join('');
+                const ownerOptions = OWNERS.map(o => `<option value="${o}" ${item.owner === o ? 'selected' : ''}>${o}</option>`).join('');
+
+                row.innerHTML = `
+                    <td class="p-4 text-center font-mono text-xs text-slate-400">${index + 1}</td>
+                    
+                    <td class="p-4">
+                        <input type="text" value="${item.name}" onchange="updateRow(${item.id}, 'name', this.value)" 
+                            class="bg-transparent border-b border-transparent hover:border-slate-300 dark:hover:border-white/20 focus:border-brand-cyan w-full outline-none font-medium transition-colors ${item.isPaid ? 'line-through' : ''}">
+                    </td>
+
+                    <td class="p-4">
+                         <select onchange="updateRow(${item.id}, 'category', this.value)" 
+                            class="bg-slate-100 dark:bg-dark-800 text-xs rounded-lg px-2 py-1 outline-none w-full border border-transparent focus:border-brand-cyan text-slate-700 dark:text-gray-300 cursor-pointer">
+                            ${categoryOptions}
+                        </select>
+                    </td>
+
+                    <td class="p-4">
+                         <select onchange="updateRow(${item.id}, 'owner', this.value)" 
+                            class="bg-slate-100 dark:bg-dark-800 text-xs rounded-lg px-2 py-1 outline-none w-full border border-transparent focus:border-brand-cyan text-slate-700 dark:text-gray-300 cursor-pointer">
+                            ${ownerOptions}
+                        </select>
+                    </td>
+                    
+                    <td class="p-4 text-center">
+                        <input type="number" min="1" max="5" value="${item.importance}" onchange="updateRow(${item.id}, 'importance', this.value)"
+                            class="w-10 text-center bg-slate-100 dark:bg-dark-800 rounded outline-none focus:ring-1 focus:ring-brand-cyan font-bold text-slate-700 dark:text-gray-300" ${item.isPaid ? 'disabled' : ''}>
+                    </td>
+                    
+                    <td class="p-4 text-center">
+                        <input type="number" min="1" max="5" value="${item.costImpact}" onchange="updateRow(${item.id}, 'costImpact', this.value)"
+                            class="w-10 text-center bg-slate-100 dark:bg-dark-800 rounded outline-none focus:ring-1 focus:ring-brand-cyan font-bold text-slate-700 dark:text-gray-300" ${item.isPaid ? 'disabled' : ''}>
+                    </td>
+                    
+                    <td class="p-4 text-center">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded text-[10px] font-bold tracking-wide ${badge.class}">
+                            ${score}
+                        </span>
+                    </td>
+                    
+                    <td class="p-4 text-right">
+                        <div class="flex items-center justify-end gap-1">
+                            <input type="number" value="${item.amount}" onchange="updateRow(${item.id}, 'amount', this.value)"
+                                class="w-24 text-right bg-transparent border-b border-transparent hover:border-slate-300 dark:hover:border-white/20 focus:border-brand-cyan outline-none font-mono tracking-tight" ${item.isPaid ? 'disabled' : ''}>
+                            <span class="text-xs font-mono text-slate-500">TL</span>
+                        </div>
+                    </td>
+                    
+                    <td class="p-4 text-center relative">
+                        <input type="date" value="${item.dueDate}" onchange="updateRow(${item.id}, 'dueDate', this.value)"
+                            class="bg-transparent text-xs font-mono text-center outline-none cursor-pointer ${isOverdue ? 'text-rose-500 font-bold' : ''}" ${item.isPaid ? 'disabled' : ''}>
+                        ${isOverdue ? '<div class="text-[9px] text-rose-500 absolute bottom-1 left-0 right-0 text-center font-bold">GECİKTİ</div>' : ''}
+                    </td>
+                    
+                    <td class="p-4 text-center">
+                        <button onclick="togglePaid(${item.id})" class="transition-transform hover:scale-110 active:scale-95">
+                            <span class="material-symbols-outlined text-2xl ${item.isPaid ? 'text-green-500' : 'text-slate-300 dark:text-gray-600 hover:text-brand-cyan'}">
+                                ${item.isPaid ? 'check_circle' : 'radio_button_unchecked'}
+                            </span>
+                        </button>
+                    </td>
+                    
+                    <td class="p-4 text-center">
+                        <button onclick="deleteRow(${item.id})" class="text-slate-400 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100">
+                            <span class="material-symbols-outlined text-lg">delete</span>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // --- Veri İşleme ---
+        function updateRow(id, field, value) {
+            const item = appData.find(i => i.id === id);
+            if(item) {
+                if(field === 'amount' || field === 'importance' || field === 'costImpact') {
+                    item[field] = parseFloat(value);
+                } else {
+                    item[field] = value;
+                }
+                updateStats();
+                renderTable();
+            }
+        }
+
+        function togglePaid(id) {
+            const item = appData.find(i => i.id === id);
+            if(item) {
+                item.isPaid = !item.isPaid;
+                updateStats();
+                renderTable();
+            }
+        }
+
+        function deleteRow(id) {
+            if(confirm('Bu kaydı silmek istediğinize emin misiniz?')) {
+                appData = appData.filter(i => i.id !== id);
+                updateStats();
+                renderTable();
+            }
+        }
+
+        function addNewRow() {
+            const newId = appData.length > 0 ? Math.max(...appData.map(i => i.id)) + 1 : 1;
+            appData.push({
+                id: newId,
+                name: "Yeni Ödeme",
+                category: "Şahsi Borç",
+                owner: "Şahıs",
+                importance: 1,
+                costImpact: 1,
+                amount: 0,
+                dueDate: today,
+                plannedDate: today,
+                isPaid: false
+            });
+            updateStats();
+            renderTable();
+        }
+
+        // --- Grafikler ---
+        function initCharts() {
+            Chart.defaults.color = '#64748b';
+            Chart.defaults.borderColor = 'rgba(255,255,255,0.05)';
+            Chart.defaults.font.family = "'Poppins', sans-serif";
+
+            // Scatter Chart
+            const ctxScatter = document.getElementById('scatterChart').getContext('2d');
+            charts.scatter = new Chart(ctxScatter, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Ödemeler',
+                        data: [],
+                        backgroundColor: (ctx) => {
+                            const val = ctx.raw?.y; // Cost Score
+                            if(val >= 4) return '#f43f5e'; // Rose
+                            if(val >= 3) return '#fbbf24'; // Amber
+                            return '#22d3ee'; // Cyan
+                        },
+                        pointRadius: 8,
+                        pointHoverRadius: 12
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            position: 'bottom',
+                            title: { display: true, text: 'Önem Puanı (1-5)', color: '#94a3b8' },
+                            min: 0, max: 6,
+                            grid: { color: 'rgba(255,255,255,0.05)' }
+                        },
+                        y: {
+                            title: { display: true, text: 'Maliyet Etkisi (1-5)', color: '#94a3b8' },
+                            min: 0, max: 6,
+                            grid: { color: 'rgba(255,255,255,0.05)' }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => `${ctx.raw.name}: ${formatMoney(ctx.raw.amount)}`
+                            },
+                            backgroundColor: '#1e293b',
+                            titleColor: '#fff',
+                            bodyColor: '#cbd5e1'
+                        },
+                        legend: { display: false }
+                    }
+                }
+            });
+
+            // Doughnut Chart (Artık Sahiplik Dağılımını Gösteriyor)
+            const ctxStatus = document.getElementById('statusChart').getContext('2d');
+            charts.status = new Chart(ctxStatus, {
+                type: 'doughnut',
+                data: {
+                    labels: OWNERS,
+                    datasets: [{
+                        data: [0, 0, 0],
+                        backgroundColor: ['#22d3ee', '#8b5cf6', '#f43f5e'], // Cyan, Purple, Rose
+                        borderWidth: 0,
+                        hoverOffset: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } }
+                    }
+                }
+            });
+        }
+
+        function updateCharts() {
+            const active = appData.filter(i => !i.isPaid);
+
+            // Update Scatter
+            charts.scatter.data.datasets[0].data = active.map(item => ({
+                x: item.importance,
+                y: item.costImpact,
+                name: item.name,
+                amount: item.amount
+            }));
+            charts.scatter.update();
+
+            // Update Doughnut (Sahiplik Bazlı Toplam Borç)
+            const ownerTotals = OWNERS.map(owner => 
+                active.filter(i => i.owner === owner).reduce((sum, i) => sum + i.amount, 0)
+            );
+
+            charts.status.data.datasets[0].data = ownerTotals;
+            charts.status.update();
+        }
+
+        // --- Başlatma ---
+        function toggleTheme() {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            document.querySelector('.theme-icon').innerText = isDark ? 'light_mode' : 'dark_mode';
+            
+            Chart.defaults.color = isDark ? '#9ca3af' : '#475569';
+            Chart.defaults.borderColor = isDark ? 'rgba(255,255,255,0.05)' : '#e2e8f0';
+            Object.values(charts).forEach(c => c.update());
+        }
+
+        document.getElementById('search-input').addEventListener('input', renderTable);
+
+        // Init
+        initCharts();
+        updateStats();
+        renderTable();
+
+    </script>
+</body>
+</html>

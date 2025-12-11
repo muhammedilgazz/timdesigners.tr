@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Öncelik Planlayıcısı - Xtreme Edition</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Poppins', 'sans-serif'],
+                    },
+                    colors: {
+                        // Xtreme Referans Renkleri
+                        dark: {
+                            950: '#050505', // Ana Arka Plan
+                            900: '#0f1014', // Input/Table Header
+                            800: '#151921', // Kart Arka Planı
+                            700: '#232732', // Hover Durumları
+                        },
+                        brand: {
+                            teal: '#0f515e',
+                            cyan: '#22d3ee',
+                            blue: '#3b82f6'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Fonts (Poppins & Material Symbols) -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
+
+    <!-- Gemini Image Gen Script -->
+    <script class="injected-script">
+        const handleImageError = (img) => {
+            img.onerror = null;
+            img.src = 'https://placehold.co/400x400/151921/475569?text=Görsel+Yok&font=poppins'; 
+        };
+    </script>
+
+    <style>
+        body { 
+            font-family: 'Poppins', sans-serif; 
+            background-color: #050505; /* Xtreme Background */
+        }
+        
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Xtreme Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f1014; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+
+        /* Chart Containers */
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        /* Glass Effect utilities */
+        .glass-panel {
+            background-color: #151921;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Gradient Text */
+        .text-gradient {
+            background: linear-gradient(to right, #22d3ee, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Input Autofill Fix for Dark Mode */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus, 
+        input:-webkit-autofill:active{
+            -webkit-box-shadow: 0 0 0 30px #0f1014 inset !important;
+            -webkit-text-fill-color: white !important;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-dark-950 dark:text-gray-300 min-h-screen flex flex-col transition-colors duration-300">
+
+    <!-- Hero Header -->
+    <header class="bg-white/80 dark:bg-dark-950/80 border-b border-slate-200 dark:border-white/5 sticky top-0 z-40 backdrop-blur-md transition-colors duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-gradient-to-br from-[#0b333e] to-[#0891b2] p-2 rounded-xl text-white shadow-lg shadow-cyan-900/20">
+                    <span class="material-symbols-outlined text-xl">analytics</span>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight text-slate-800 dark:text-white">Öncelik<span class="text-gradient"> Planlayıcısı</span></h1>
+                    <p class="text-[11px] text-slate-500 dark:text-gray-500 font-medium tracking-wider uppercase">Xtreme Edition</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="toggleTheme()" class="p-2.5 text-slate-500 hover:text-cyan-600 hover:bg-cyan-50 dark:text-gray-400 dark:hover:text-cyan-400 dark:hover:bg-white/5 rounded-xl transition-all" title="Temayı Değiştir">
+                    <span class="material-symbols-outlined theme-icon">light_mode</span>
+                </button>
+                <div class="hidden sm:flex flex-col items-end">
+                    <span class="text-[10px] text-slate-500 dark:text-gray-500 font-bold uppercase tracking-wider">Toplam Tahmini Tutar</span>
+                    <span id="total-cost-display" class="text-lg font-bold text-cyan-700 dark:text-cyan-400 font-mono">0 TL</span>
+                </div>
+                <button onclick="window.print()" class="p-2.5 text-slate-500 hover:text-cyan-600 hover:bg-cyan-50 dark:text-gray-400 dark:hover:text-cyan-400 dark:hover:bg-white/5 rounded-xl transition-all" title="Raporu Yazdır">
+                    <span class="material-symbols-outlined">print</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6">
+
+        <!-- 1. Bölüm: KPI ve Bütçe -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            <!-- Bütçe Yönetimi (Xtreme Style) -->
+            <div class="glass-panel bg-white dark:bg-dark-800 p-6 rounded-2xl flex flex-col justify-between col-span-1 md:col-span-1 relative overflow-hidden transition-colors duration-300">
+                <div class="absolute top-0 right-0 p-4 opacity-5 dark:opacity-[0.03]">
+                    <span class="material-symbols-outlined text-9xl dark:text-white">account_balance_wallet</span>
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-3 relative z-10">
+                        <label class="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wide">Toplam Bütçe</label>
+                        <span class="material-symbols-outlined text-slate-400 dark:text-gray-600 text-sm">lock</span>
+                    </div>
+                    <div class="relative z-10 group">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 font-semibold">₺</span>
+                        <input type="number" id="budget-input" value="300000" readonly class="w-full pl-8 pr-4 py-3 bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-white/5 rounded-xl outline-none font-bold text-xl text-slate-700 dark:text-gray-200 shadow-inner cursor-not-allowed opacity-80 font-mono">
+                    </div>
+                </div>
+                <div class="mt-6 relative z-10">
+                    <div class="flex justify-between text-xs mb-2 font-medium">
+                        <span id="budget-status-text" class="text-slate-600 dark:text-gray-400">Kullanım</span>
+                        <span id="budget-percentage" class="dark:text-cyan-400 font-mono">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-100 dark:bg-dark-900 rounded-full h-2 overflow-hidden ring-1 ring-white/5">
+                        <div id="budget-bar" class="bg-gradient-to-r from-cyan-500 to-blue-600 h-2 rounded-full transition-all duration-700 ease-out shadow-[0_0_10px_rgba(34,211,238,0.3)]" style="width: 0%;"></div>
+                    </div>
+                    <p id="remaining-budget" class="text-xs text-right mt-2 font-medium text-slate-500 dark:text-gray-500 font-mono">Hesaplanıyor...</p>
+                </div>
+            </div>
+
+            <!-- Hızlı İstatistikler -->
+            <div class="grid grid-cols-2 gap-4 col-span-1 md:col-span-2">
+                <!-- Toplam Ürün -->
+                <div class="glass-panel bg-white dark:bg-dark-800 p-5 rounded-2xl flex items-center gap-4 transition-transform hover:-translate-y-1 duration-300">
+                    <div class="p-3.5 bg-violet-100 dark:bg-gradient-to-br dark:from-[#2e1065]/50 dark:to-[#4c1d95]/50 text-violet-600 dark:text-violet-300 rounded-xl ring-1 dark:ring-white/10 shadow-lg shadow-violet-900/10">
+                        <span class="material-symbols-outlined">inventory_2</span>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-slate-500 dark:text-gray-500 font-bold uppercase tracking-wider">Toplam Ürün</p>
+                        <h3 class="text-2xl font-bold text-slate-800 dark:text-gray-100 mt-1 font-mono" id="stat-total-items">0</h3>
+                    </div>
+                </div>
+
+                <!-- En Yüksek Öncelik -->
+                <div class="glass-panel bg-white dark:bg-dark-800 p-5 rounded-2xl flex items-center gap-4 transition-transform hover:-translate-y-1 duration-300">
+                    <div class="p-3.5 bg-emerald-100 dark:bg-gradient-to-br dark:from-[#064e3b]/50 dark:to-[#059669]/50 text-emerald-600 dark:text-emerald-300 rounded-xl ring-1 dark:ring-white/10 shadow-lg shadow-emerald-900/10">
+                        <span class="material-symbols-outlined">star</span>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-slate-500 dark:text-gray-500 font-bold uppercase tracking-wider">1. Öncelikli</p>
+                        <h3 class="text-2xl font-bold text-slate-800 dark:text-gray-100 mt-1 font-mono" id="stat-top-priority-items">0</h3>
+                    </div>
+                </div>
+
+                <!-- Ortalama Maliyet -->
+                <div class="glass-panel bg-white dark:bg-dark-800 p-5 rounded-2xl flex items-center gap-4 transition-transform hover:-translate-y-1 duration-300">
+                    <div class="p-3.5 bg-blue-100 dark:bg-gradient-to-br dark:from-[#1e3a8a]/50 dark:to-[#3b82f6]/50 text-blue-600 dark:text-blue-300 rounded-xl ring-1 dark:ring-white/10 shadow-lg shadow-blue-900/10">
+                        <span class="material-symbols-outlined">attach_money</span>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-slate-500 dark:text-gray-500 font-bold uppercase tracking-wider">Ort. Fiyat</p>
+                        <h3 class="text-xl font-bold text-slate-800 dark:text-gray-100 mt-1 font-mono" id="stat-avg-cost">0 TL</h3>
+                    </div>
+                </div>
+
+                <!-- Tamamlanan -->
+                <div class="glass-panel bg-white dark:bg-dark-800 p-5 rounded-2xl flex items-center gap-4 transition-transform hover:-translate-y-1 duration-300">
+                    <div class="p-3.5 bg-gray-100 dark:bg-dark-700 text-gray-600 dark:text-gray-300 rounded-xl ring-1 dark:ring-white/10 shadow-lg">
+                        <span class="material-symbols-outlined">check_circle</span>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-slate-500 dark:text-gray-500 font-bold uppercase tracking-wider">Bu Ay Alınacak</p>
+                        <h3 class="text-2xl font-bold text-slate-800 dark:text-gray-100 mt-1 font-mono" id="stat-bought-items">0</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Bölüm: Analitik Grafikler -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Scatter Plot -->
+            <div class="glass-panel bg-white dark:bg-dark-800 p-6 rounded-2xl lg:col-span-2 transition-colors duration-300">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800 dark:text-gray-100 flex items-center gap-2">
+                            <span class="w-2 h-6 bg-cyan-500 rounded-full"></span>
+                            Öncelik Matrisi
+                        </h2>
+                        <p class="text-xs text-slate-500 dark:text-gray-500 mt-1">
+                            <span class="inline-block w-2 h-2 rounded-full bg-green-500 mr-1 shadow-[0_0_5px_rgba(34,197,94,0.5)]"></span>Acil & Ucuz
+                            <span class="inline-block w-2 h-2 rounded-full bg-red-500 mx-1 ml-3 shadow-[0_0_5px_rgba(239,68,68,0.5)]"></span>Gereksiz & Pahalı
+                        </p>
+                    </div>
+                    <div class="bg-slate-100 dark:bg-dark-900 p-2 rounded-lg text-slate-400 dark:text-gray-600">
+                        <span class="material-symbols-outlined">scatter_plot</span>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="scatterChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Bar Chart -->
+            <div class="glass-panel bg-white dark:bg-dark-800 p-6 rounded-2xl transition-colors duration-300">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800 dark:text-gray-100 flex items-center gap-2">
+                             <span class="w-2 h-6 bg-purple-500 rounded-full"></span>
+                            Kategori Payı
+                        </h2>
+                        <p class="text-xs text-slate-500 dark:text-gray-500 mt-1">Bütçe dağılım analizi.</p>
+                    </div>
+                    <div class="bg-slate-100 dark:bg-dark-900 p-2 rounded-lg text-slate-400 dark:text-gray-600">
+                        <span class="material-symbols-outlined">pie_chart</span>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Bölüm: Detaylı Liste -->
+        <div class="glass-panel bg-white dark:bg-dark-800 rounded-2xl overflow-hidden flex flex-col transition-colors duration-300">
+            <!-- Tablo Başlığı ve Filtreler -->
+            <div class="p-5 border-b border-slate-100 dark:border-white/5 flex flex-wrap gap-4 justify-between items-center bg-slate-50/50 dark:bg-dark-900/30">
+                <div class="flex items-center gap-4">
+                    <h2 class="font-bold text-slate-700 dark:text-gray-200 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-cyan-500">list_alt</span>
+                        Alışveriş Listesi
+                    </h2>
+                    <div class="relative group">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 material-symbols-outlined text-[18px] group-focus-within:text-cyan-500 transition-colors">search</span>
+                        <input type="text" id="search-input" placeholder="Ürün ara..." class="pl-10 pr-4 py-2 text-sm bg-white dark:bg-dark-900 border border-slate-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 dark:text-gray-200 outline-none w-40 sm:w-64 transition-all shadow-sm">
+                    </div>
+                </div>
+                
+                <div class="flex gap-2">
+                    <button class="filter-btn active px-4 py-2 rounded-xl text-xs font-semibold transition-all bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-900/20 hover:shadow-cyan-500/30" data-filter="all">Tümü</button>
+                    <button class="filter-btn px-4 py-2 rounded-xl text-xs font-semibold transition-all bg-white dark:bg-dark-700 text-slate-600 dark:text-gray-300 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-dark-700 dark:hover:text-white" data-filter="priority">Öncelikli (1.0-2.0)</button>
+                    <button class="filter-btn px-4 py-2 rounded-xl text-xs font-semibold transition-all bg-white dark:bg-dark-700 text-slate-600 dark:text-gray-300 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-dark-700 dark:hover:text-white" data-filter="bought">Bu Ay Alınacaklar</button>
+                </div>
+            </div>
+
+            <!-- Tablo -->
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 dark:bg-dark-900 text-xs uppercase tracking-wider text-slate-500 dark:text-gray-500 font-semibold border-b border-slate-200 dark:border-white/5">
+                            <th class="p-4 w-12 text-center">Durum</th>
+                            <th class="p-4 w-24">Görsel</th>
+                            <th class="p-4 min-w-[200px] cursor-pointer hover:text-cyan-600 dark:hover:text-cyan-400 group transition-colors" onclick="sortTable('name')">
+                                Ürün Adı <span class="material-symbols-outlined align-middle text-[14px] opacity-0 group-hover:opacity-100">sort</span>
+                            </th>
+                            <th class="p-4 w-32 text-center cursor-pointer hover:text-cyan-600 dark:hover:text-cyan-400 group transition-colors" onclick="sortTable('needScore')">
+                                İhtiyaç (1-5) <span class="material-symbols-outlined align-middle text-[14px] opacity-0 group-hover:opacity-100">unfold_more</span>
+                            </th>
+                            <th class="p-4 w-32 text-center cursor-pointer hover:text-cyan-600 dark:hover:text-cyan-400 group transition-colors" onclick="sortTable('costScore')">
+                                Maliyet (1-5) <span class="material-symbols-outlined align-middle text-[14px] opacity-0 group-hover:opacity-100">unfold_more</span>
+                            </th>
+                            <th class="p-4 w-32 text-center cursor-pointer hover:text-cyan-600 dark:hover:text-cyan-400 group transition-colors" onclick="sortTable('calculatedPriority')">
+                                Öncelik Puanı <span class="material-symbols-outlined align-middle text-[14px] opacity-0 group-hover:opacity-100">sort</span>
+                            </th>
+                            <th class="p-4 w-40 text-right cursor-pointer hover:text-cyan-600 dark:hover:text-cyan-400 group transition-colors" onclick="sortTable('price')">
+                                Fiyat <span class="material-symbols-outlined align-middle text-[14px] opacity-0 group-hover:opacity-100">payments</span>
+                            </th>
+                            <th class="p-4 w-24 text-center">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body" class="text-sm text-slate-700 dark:text-gray-300 divide-y divide-slate-100 dark:divide-white/5">
+                        <!-- JS ile doldurulacak -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Empty State -->
+            <div id="empty-state" class="hidden p-16 text-center flex-col items-center justify-center text-slate-400 dark:text-gray-600">
+                <span class="material-symbols-outlined text-6xl mb-4 opacity-50">search_off</span>
+                <p class="text-lg">Aradığınız kriterlere uygun ürün bulunamadı.</p>
+            </div>
+        </div>
+
+        <div class="text-center pb-8 pt-4">
+            <button onclick="resetData()" class="text-xs text-slate-400 hover:text-red-500 dark:text-gray-600 dark:hover:text-red-400 transition-colors flex items-center justify-center gap-1 mx-auto">
+                <span class="material-symbols-outlined text-[14px]">restart_alt</span> Verileri Sıfırla
+            </button>
+        </div>
+
+    </main>
+
+    <script>
+        // --- Tema Yönetimi (Xtreme Default Dark) ---
+        function initTheme() {
+            // Varsayılan olarak DARK modu tercih et, eğer localStorage'da açıkça light yoksa
+            if (localStorage.getItem('theme') === 'light') {
+                document.documentElement.classList.remove('dark');
+                updateThemeIcon('light');
+                updateChartTheme('light');
+            } else {
+                document.documentElement.classList.add('dark');
+                updateThemeIcon('dark');
+                updateChartTheme('dark');
+            }
+        }
+
+        function toggleTheme() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+                updateThemeIcon('light');
+                updateChartTheme('light');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+                updateThemeIcon('dark');
+                updateChartTheme('dark');
+            }
+        }
+
+        function updateThemeIcon(theme) {
+            const icon = document.querySelector('.theme-icon');
+            icon.textContent = theme === 'dark' ? 'light_mode' : 'dark_mode';
+        }
+
+        function updateChartTheme(theme) {
+            const isDark = theme === 'dark';
+            // Xtreme Colors
+            const gridColor = isDark ? 'rgba(255, 255, 255, 0.05)' : '#f1f5f9';
+            const textColor = isDark ? '#9ca3af' : '#64748b';
+
+            if (charts.scatter) {
+                charts.scatter.options.scales.x.grid.color = gridColor;
+                charts.scatter.options.scales.y.grid.color = gridColor;
+                charts.scatter.options.scales.x.ticks.color = textColor;
+                charts.scatter.options.scales.y.ticks.color = textColor;
+                charts.scatter.update();
+            }
+            if (charts.category) {
+                 charts.category.options.plugins.legend.labels.color = textColor;
+                 charts.category.update();
+            }
+        }
+
+        // --- Veri Yapısı (Değişmedi) ---
+          const defaultData = [
+            { id: 1, name: "Poco Pad M1", category: "Elektronik", needScore: 1, costScore: 1, price: 12999, bought: false, image: "/gen?prompt=Poco+Pad+M1+tablet+device+front+view+screen+white+background&aspect=1:1" },
+            { id: 2, name: "Baydars Group Akıllı Sihirli Sehpa", category: "Mobilya", needScore: 1, costScore: 1, price: 3499, bought: false, image: "/gen?prompt=smart+convertible+coffee+table+to+dining+table+wooden+furniture+white+background&aspect=1:1" }, 
+            { id: 3, name: "Tecno Spark 10 Pro", category: "Elektronik", needScore: 1, costScore: 1, price: 8500, bought: false, image: "/gen?prompt=Tecno+Spark+10+Pro+smartphone+black+rear+camera+view+white+background&aspect=1:1" },
+            { id: 4, name: "Hoover NDPH11A2TCBEXS-17 Wi-Fi 11 Kg Çamaşır Kurutma Makinesi", category: "Beyaz Eşya", needScore: 2, costScore: 1, price: 15882, bought: false, image: "/gen?prompt=Hoover+NDPH11A2TCBEXS+tumble+dryer+machine+front+view+white+background&aspect=1:1" }, 
+            { id: 5, name: "Tecno Spark 30 Pro", category: "Elektronik", needScore: 1, costScore: 2, price: 13000, bought: false, image: "/gen?prompt=Tecno+Spark+30+Pro+smartphone+sleek+design+white+background&aspect=1:1" },
+            { id: 6, name: "Mac Mini MU9D3TU/A Apple M4 16 GB 256 GB SSD Mini PC", category: "Bilgisayar", needScore: 2, costScore: 2, price: 26899, bought: false, image: "/gen?prompt=Apple+Mac+Mini+M4+desktop+computer+silver+top+view+white+background&aspect=1:1" }, 
+            { id: 7, name: "Samsung 34\" ViewFinity S50GC Series Ultra-WQHD Monitor", category: "Elektronik", needScore: 2, costScore: 2, price: 8314, bought: false, image: "/gen?prompt=Samsung+ViewFinity+S50GC+34+inch+monitor+front+view+white+background&aspect=1:1" }, 
+            { id: 8, name: "Powerbank", category: "Aksesuar", needScore: 2, costScore: 2, price: 1500, bought: false, image: "/gen?prompt=generic+powerbank+portable+charger+black+white+background&aspect=1:1" },
+            { id: 9, name: "ONVO 65OVF9000UQ 65\" 165 Ekran Uydu Alıcılı 4K Ultra HD Google Smart QLED TV", category: "Elektronik", needScore: 3, costScore: 3, price: 23399, bought: false, image: "/gen?prompt=ONVO+65+inch+smart+TV+screen+front+view+white+background&aspect=1:1" }, 
+            { id: 10, name: "TruvaTicaret Akıllı Görüntülü Kablosuz Kapı Zili", category: "Ev Güvenlik", needScore: 3, costScore: 3, price: 651, bought: false, image: "/gen?prompt=smart+video+doorbell+wireless+black+camera+white+background&aspect=1:1" },
+            { id: 11, name: "Samsung Galaxy Tab S11", category: "Elektronik", needScore: 3, costScore: 4, price: 27199, bought: false, image: "/gen?prompt=Samsung+Galaxy+Tab+S+series+tablet+grey+with+stylus+pen+white+background&aspect=1:1" },
+            { id: 12, name: "Robot Süpürge", category: "Ev Aleti", needScore: 3, costScore: 4, price: 15000, bought: false, image: "/gen?prompt=white+robot+vacuum+cleaner+top+view+white+background&aspect=1:1" },
+            { id: 13, name: "Samsung Akıllı Saat", category: "Aksesuar", needScore: 5, costScore: 3, price: 7000, bought: false, image: "/gen?prompt=Samsung+Galaxy+Watch+smartwatch+black+band+white+background&aspect=1:1" },
+            { id: 14, name: "Samsung S26 Ultra", category: "Elektronik", needScore: 4, costScore: 5, price: 75000, bought: false, image: "/gen?prompt=Samsung+Galaxy+S+Ultra+smartphone+stylus+white+background&aspect=1:1" },
+            { id: 15, name: "Apec PS5 125 CC Scooter Motosiklet", category: "Araç", needScore: 4, costScore: 5, price: 45799, bought: false, image: "/gen?prompt=Apec+PS5+125cc+scooter+motorcycle+silver+white+background&aspect=1:1" }, 
+            { id: 16, name: "Goldmaster Enjoy-200 Şarjlı FM Radyolu USB Micro SD Aux Girişli DJ Box Bluetooth Destekli 50 W Hi-Fi Ses Sistemi", category: "Elektronik", needScore: 5, costScore: 5, price: 14765, bought: false, image: "/gen?prompt=Goldmaster+Enjoy+200+party+speaker+black+with+led+lights+white+background&aspect=1:1" }, 
+            { id: 17, name: "Yasomi DU-F03V Smartpaw+ 4L/5L Kapasiteli Şarjlı Akıllı Otomatik Mama Ve Su Kabı", category: "Evcil Hayvan", needScore: 5, costScore: 5, price: 2800, bought: false, image: "/gen?prompt=Yasomi+Smartpaw+pet+feeder+black+device+white+background&aspect=1:1" }, 
+            { id: 18, name: "Canon i-Sensys MF655CDW Wi-Fi + Tarayıcı + Fotokopi Renkli Çok Fonksiyonlu Lazer Yazıcı", category: "Ofis", needScore: 2, costScore: 2, price: 16999, bought: false, image: "/gen?prompt=Canon+i-Sensys+MF655CDW+laser+printer+white+background&aspect=1:1" },
+            { id: 19, name: "Dreame L10s Pro Ultra Heat Robot Süpürge", category: "Ev Aleti", needScore: 5, costScore: 5, price: 24999, bought: false, image: "/gen?prompt=Dreame+L10s+Pro+Ultra+Heat+robot+vacuum+white+station+studio+shot&aspect=1:1" },
+            { id: 20, name: "Dreame L40 Ultra CE Robot Süpürge", category: "Ev Aleti", needScore: 5, costScore: 5, price: 27999, bought: false, image: "/gen?prompt=Dreame+L40+Ultra+robot+vacuum+white+station+studio+shot&aspect=1:1" },
+            { id: 21, name: "Motosiklet Kuyruk Çantası Seti", category: "Araç Aksesuarı", needScore: 5, costScore: 5, price: 2240, bought: false, image: "/gen?prompt=motorcycle+rear+tail+bag+luggage+set+black+studio+shot&aspect=1:1" },
+            { id: 22, name: "Rampage Oyuncu Koltuğu", category: "Mobilya", needScore: 5, costScore: 5, price: 17429, bought: false, image: "/gen?prompt=Rampage+gaming+chair+black+fabric+studio+shot&aspect=1:1" },
+            { id: 23, name: "Vorwerk Thermomix TM6", category: "Mutfak", needScore: 5, costScore: 5, price: 74990, bought: false, image: "/gen?prompt=Vorwerk+Thermomix+TM6+black+limited+edition+kitchen+appliance+studio+shot&aspect=1:1" },
+            { id: 24, name: "Philips Sürahi Blender", category: "Küçük Ev Aletleri", needScore: 5, costScore: 5, price: 4999, bought: false, image: "/gen?prompt=Philips+high+speed+blender+black+silver+HR3760+studio+shot&aspect=1:1" },
+            { id: 25, name: "Kingpro Bamboo KSM4001 Mutfak Şefi", category: "Mutfak", needScore: 5, costScore: 5, price: 15500, bought: false, image: "/gen?prompt=Kingpro+Bamboo+kitchen+stand+mixer+black+studio+shot&aspect=1:1" },
+            { id: 26, name: "Kingpro KYF28 MagicChef XXL Airfryer", category: "Mutfak", needScore: 5, costScore: 5, price: 1605, bought: false, image: "/gen?prompt=Kingpro+airfryer+dual+basket+black+silver+studio+shot&aspect=1:1" },
+            { id: 27, name: "Karaca Çaysever Robotea Pro 4in1", category: "Mutfak", needScore: 5, costScore: 5, price: 8349, bought: false, image: "/gen?prompt=Karaca+tea+maker+robotea+pro+black+chrome+studio+shot&aspect=1:1" },
+            { id: 28, name: "Porsima 1059 12'li Kilit Kapak Etiketli Baharatlık Seti", category: "Mutfak", needScore: 5, costScore: 5, price: 145, bought: false, image: "/gen?prompt=spice+jar+set+12+pieces+kitchen+organizer+studio+shot&aspect=1:1" },
+            { id: 29, name: "Porsima 1130 İki Katlı Raf Çok Amaçlı Evye Altı Düzenleyici", category: "Mutfak", needScore: 5, costScore: 5, price: 128, bought: false, image: "/gen?prompt=under+sink+organizer+shelf+2+tier+black+studio+shot&aspect=1:1" },
+            { id: 30, name: "Worx WX739.9 MakerX Gravür Seti", category: "Hobi", needScore: 5, costScore: 5, price: 2538, bought: false, image: "/gen?prompt=Worx+MakerX+rotary+tool+set+crafting+tool+studio+shot&aspect=1:1" },
+            { id: 31, name: "Worx WX106 Şarjlı Gravür", category: "Hobi", needScore: 5, costScore: 5, price: 3472, bought: false, image: "/gen?prompt=Worx+WX106+cordless+rotary+tool+pen+style+studio+shot&aspect=1:1" },
+            { id: 32, name: "Moddestore Kablosuz Keypad", category: "Bilgisayar", needScore: 5, costScore: 5, price: 350, bought: false, image: "/gen?prompt=wireless+numeric+keypad+black+computer+accessory+studio+shot&aspect=1:1" },
+            { id: 33, name: "VMAN 138 In 1 Hassas Tornavida Seti", category: "Hobi", needScore: 5, costScore: 5, price: 1642, bought: false, image: "/gen?prompt=VMAN+138+in+1+precision+screwdriver+set+grey+case+studio+shot&aspect=1:1" },
+            { id: 34, name: "Turbox Tx4291 i5 6400 Masaüstü Bilgisayar Seti", category: "Bilgisayar", needScore: 5, costScore: 5, price: 15131, bought: false, image: "/gen?prompt=Turbox+desktop+PC+set+with+monitor+keyboard+mouse+black+studio+shot&aspect=1:1" },
+            { id: 35, name: "Neutron Smart Air Fryer Pro Akıllı Fritöz 7.3 Litre", category: "Mutfak", needScore: 5, costScore: 5, price: 1799, bought: false, image: "/gen?prompt=Neutron+Smart+Air+Fryer+Pro+white+digital+display+studio+shot&aspect=1:1" },
+            { id: 36, name: "Beko AP 8100 Havamis Hava Temizleme Cihazı", category: "Ev Aleti", needScore: 5, costScore: 5, price: 22999, bought: false, image: "/gen?prompt=Beko+AP+8100+air+purifier+bronze+color+studio+shot&aspect=1:1" },
+            { id: 37, name: "Bix BX05HD Alüminyum Kasa Type-C M.2 SSD Disk Kutusu", category: "Bilgisayar Aksesuarı", needScore: 5, costScore: 5, price: 850, bought: false, image: "/gen?prompt=Bix+M.2+SSD+enclosure+aluminum+grey+studio+shot&aspect=1:1" },
+            { id: 38, name: "Ironstar Type-C To HDMI Gri Laptop Tablet Dönüştürücü", category: "Bilgisayar Aksesuarı", needScore: 5, costScore: 5, price: 355, bought: false, image: "/gen?prompt=Type-C+to+HDMI+adapter+grey+cable+studio+shot&aspect=1:1" },
+            { id: 39, name: "Ugreen M.2 NVMe SSD Type-C 3.1 Gen2 Disk Kutusu", category: "Bilgisayar Aksesuarı", needScore: 5, costScore: 5, price: 1707, bought: false, image: "/gen?prompt=Ugreen+M.2+NVMe+SSD+enclosure+grey+sleek+studio+shot&aspect=1:1" },
+            { id: 40, name: "Siyah Fonksiyonel Duş Başlığı (2 Adet)", category: "Banyo", needScore: 5, costScore: 5, price: 50, bought: false, image: "/gen?prompt=black+shower+head+modern+bathroom+accessory+studio+shot&aspect=1:1" },
+            { id: 41, name: "Metalay Metal Siyah Tava Ve Tencere Kapağı Düzenleyici", category: "Mutfak", needScore: 5, costScore: 5, price: 132, bought: false, image: "/gen?prompt=black+metal+pan+organizer+rack+kitchen+storage+studio+shot&aspect=1:1" },
+            { id: 42, name: "Dyson V16 Piston Animal Submarine Islak Kuru Dikey Süpürge", category: "Ev Aleti", needScore: 5, costScore: 5, price: 47999, bought: false, image: "/gen?prompt=Dyson+wet+and+dry+vacuum+cleaner+V15+Submarine+studio+shot&aspect=1:1" },
+            { id: 43, name: "Uni-Ball Um-153 Signo Broad İmza Kalemi 1.0 Mm Siyah", category: "Kırtasiye", needScore: 5, costScore: 5, price: 38, bought: false, image: "/gen?prompt=Uni-ball+Signo+Broad+pen+black+ink+studio+shot&aspect=1:1" },
+            { id: 44, name: "Kingpro GrillChef K471 2200 W Tost Makinesi", category: "Mutfak", needScore: 5, costScore: 5, price: 6999, bought: false, image: "/gen?prompt=Kingpro+GrillChef+K471+toast+machine+studio+shot&aspect=1:1" },
+            { id: 45, name: "Kingpro Tunga KKM1174 Katı Meyve Sıkacağı", category: "Mutfak", needScore: 5, costScore: 5, price: 6743, bought: false, image: "/gen?prompt=Kingpro+Tunga+juicer+studio+shot&aspect=1:1" },
+            { id: 46, name: "Kingpro Purelio KEB1032 1500 W Blender Seti", category: "Mutfak", needScore: 5, costScore: 5, price: 2499, bought: false, image: "/gen?prompt=Kingpro+Purelio+hand+blender+set+studio+shot&aspect=1:1" },
+            { id: 47, name: "Kingpro Modore KSM4000 1500 W Mutfak Şefi", category: "Mutfak", needScore: 5, costScore: 5, price: 9499, bought: false, image: "/gen?prompt=Kingpro+Modore+stand+mixer+red+studio+shot&aspect=1:1" }
+        ];
+        let appData = JSON.parse(localStorage.getItem('homeNeedsDataV14')) || JSON.parse(JSON.stringify(defaultData));
+        let charts = {}; 
+        let currentFilter = 'all';
+        let sortConfig = { key: 'calculatedPriority', direction: 'asc' };
+
+        // --- Mantık Fonksiyonları ---
+        function calculatePriority(item) {
+            return ((item.needScore + item.costScore) / 2).toFixed(1);
+        }
+
+        function getPriorityBadge(score) {
+            // Xtreme Badges
+            if (score <= 1.5) return { label: 'Çok Yüksek', class: 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 dark:text-emerald-400' }; 
+            if (score <= 2.5) return { label: 'Yüksek', class: 'bg-cyan-500/10 text-cyan-600 border border-cyan-500/20 dark:text-cyan-400' }; 
+            if (score <= 3.5) return { label: 'Orta', class: 'bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 dark:text-yellow-400' }; 
+            if (score <= 4.5) return { label: 'Düşük', class: 'bg-orange-500/10 text-orange-600 border border-orange-500/20 dark:text-orange-400' }; 
+            return { label: 'Çok Düşük', class: 'bg-red-500/10 text-red-600 border border-red-500/20 dark:text-red-400' }; 
+        }
+
+        // --- DOM Elements ---
+        const dom = {
+            tableBody: document.getElementById('table-body'),
+            totalCost: document.getElementById('total-cost-display'),
+            budgetInput: document.getElementById('budget-input'),
+            budgetBar: document.getElementById('budget-bar'),
+            budgetPercent: document.getElementById('budget-percentage'),
+            remainingBudget: document.getElementById('remaining-budget'),
+            statTotal: document.getElementById('stat-total-items'),
+            statTopPriority: document.getElementById('stat-top-priority-items'),
+            statAvgCost: document.getElementById('stat-avg-cost'),
+            statBought: document.getElementById('stat-bought-items'),
+            emptyState: document.getElementById('empty-state'),
+            searchInput: document.getElementById('search-input')
+        };
+
+        function initCharts() {
+            // Xtreme Chart Config
+            Chart.defaults.font.family = "'Poppins', sans-serif";
+            
+            const ctxScatter = document.getElementById('scatterChart').getContext('2d');
+            charts.scatter = new Chart(ctxScatter, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Ürünler',
+                        data: [], 
+                        backgroundColor: '#22d3ee', // Cyan
+                        pointRadius: 6,
+                        pointHoverRadius: 10,
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Maliyet Puanı (1=Ucuz, 5=Pahalı)', color: '#6b7280' },
+                            min: 0.5, max: 5.5,
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { stepSize: 1, color: '#9ca3af' }
+                        },
+                        y: {
+                            title: { display: true, text: 'İhtiyaç Puanı (1=Acil, 5=Gereksiz)', color: '#6b7280' },
+                            min: 0.5, max: 5.5,
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { stepSize: 1, color: '#9ca3af' },
+                            reverse: true 
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            backgroundColor: '#151921',
+                            titleColor: '#ffffff',
+                            bodyColor: '#e5e7eb',
+                            borderColor: 'rgba(255,255,255,0.1)',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: (ctx) => `${ctx.raw.name} (P: ${ctx.raw.priority})`
+                            }
+                        }
+                    }
+                }
+            });
+
+            const ctxCategory = document.getElementById('categoryChart').getContext('2d');
+            charts.category = new Chart(ctxCategory, {
+                type: 'doughnut',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: [
+                            '#22d3ee', // Cyan
+                            '#3b82f6', // Blue
+                            '#8b5cf6', // Violet
+                            '#f43f5e', // Rose
+                            '#10b981', // Emerald
+                            '#f59e0b'  // Amber
+                        ],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { 
+                            position: 'right', 
+                            labels: { 
+                                boxWidth: 12, 
+                                font: { size: 10, family: 'Poppins' },
+                                color: '#9ca3af'
+                            } 
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateCharts() {
+            const activeItems = appData.filter(i => !i.bought);
+
+            charts.scatter.data.datasets[0].data = activeItems.map(item => ({
+                x: item.costScore,
+                y: item.needScore,
+                name: item.name,
+                priority: calculatePriority(item)
+            }));
+            
+            charts.scatter.data.datasets[0].backgroundColor = activeItems.map(item => {
+                const p = parseFloat(calculatePriority(item));
+                if (p <= 1.5) return '#10b981'; // Green
+                if (p <= 2.5) return '#22d3ee'; // Cyan
+                if (p <= 3.5) return '#f59e0b'; // Amber
+                return '#ef4444'; // Red                
+            });
+            charts.scatter.update();
+
+            const categoryMap = {};
+            activeItems.forEach(item => {
+                if(!categoryMap[item.category]) categoryMap[item.category] = 0;
+                categoryMap[item.category] += item.price;
+            });
+            charts.category.data.labels = Object.keys(categoryMap);
+            charts.category.data.datasets[0].data = Object.values(categoryMap);
+            charts.category.update();
+        }
+
+        // --- Core App Logic ---
+        function formatMoney(amount) {
+            return new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 }).format(amount) + ' TL';
+        }
+
+        function updateStats() {
+            const totalCost = appData.reduce((sum, item) => sum + item.price, 0);
+            const boughtItems = appData.filter(i => i.bought);
+            const activeItems = appData.filter(i => !i.bought);
+            const topPriorityItems = activeItems.filter(i => parseFloat(calculatePriority(i)) <= 2.0);
+
+            dom.totalCost.innerText = formatMoney(totalCost);
+            
+            const budget = parseFloat(dom.budgetInput.value) || 0;
+            const percent = Math.min((totalCost / budget) * 100, 100);
+            
+            dom.budgetBar.style.width = `${percent}%`;
+            dom.budgetPercent.innerText = `${Math.round(percent)}%`;
+            
+            if(totalCost > budget) {
+                dom.budgetBar.className = "bg-gradient-to-r from-red-500 to-orange-600 h-2 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]";
+                dom.remainingBudget.innerHTML = `<span class="text-red-500 font-bold">Aşıldı: ${formatMoney(totalCost - budget)}</span>`;
+            } else {
+                dom.budgetBar.className = "bg-gradient-to-r from-cyan-500 to-blue-600 h-2 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(34,211,238,0.3)]";
+                dom.remainingBudget.innerText = `Kalan: ${formatMoney(budget - totalCost)}`;
+            }
+
+            dom.statTotal.innerText = appData.length;
+            dom.statTopPriority.innerText = topPriorityItems.length;
+            dom.statBought.innerText = boughtItems.length;
+            
+            const avgPrice = totalCost > 0 ? totalCost / appData.length : 0;
+            dom.statAvgCost.innerText = formatMoney(avgPrice);
+
+            updateCharts();
+            localStorage.setItem('homeNeedsDataV14', JSON.stringify(appData));
+        }
+
+        function renderTable() {
+            dom.tableBody.innerHTML = '';
+            
+            let filtered = appData.filter(item => {
+                const searchMatch = item.name.toLowerCase().includes(dom.searchInput.value.toLowerCase());
+                if (!searchMatch) return false;
+
+                if (currentFilter === 'bought') return item.bought;
+                if (currentFilter === 'priority') return !item.bought && parseFloat(calculatePriority(item)) <= 2.0;
+                return !item.bought; 
+            });
+
+            if (currentFilter === 'all' && dom.searchInput.value === '') {
+                filtered = [...appData].sort((a,b) => (a.bought === b.bought) ? 0 : a.bought ? 1 : -1);
+            }
+
+            filtered.sort((a, b) => {
+                let valA = a[sortConfig.key];
+                let valB = b[sortConfig.key];
+                
+                if(sortConfig.key === 'calculatedPriority') {
+                    valA = parseFloat(calculatePriority(a));
+                    valB = parseFloat(calculatePriority(b));
+                }
+
+                if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            if (filtered.length === 0) {
+                dom.emptyState.classList.remove('hidden');
+                dom.emptyState.classList.add('flex');
+            } else {
+                dom.emptyState.classList.add('hidden');
+                dom.emptyState.classList.remove('flex');
+            }
+
+            filtered.forEach(item => {
+                const priorityScore = calculatePriority(item);
+                const badge = getPriorityBadge(priorityScore);
+                const isBought = item.bought;
+
+                const row = document.createElement('tr');
+                row.className = `group transition-colors border-b border-slate-50 last:border-0 dark:border-white/5 ${isBought ? 'bg-slate-50 dark:bg-dark-900 opacity-50 grayscale' : 'hover:bg-cyan-50/50 dark:hover:bg-white/[0.02]'}`;
+
+                row.innerHTML = `
+                    <td class="p-4 text-center">
+                         <button onclick="toggleBought(${item.id})" class="transition-transform hover:scale-110 active:scale-95" title="${isBought ? 'Geri al' : 'Tamamlandı işaretle'}">
+                            <span class="material-symbols-outlined text-2xl ${isBought ? 'text-green-500' : 'text-slate-300 hover:text-cyan-500 dark:text-gray-600 dark:hover:text-cyan-400'}">
+                                ${isBought ? 'check_circle' : 'radio_button_unchecked'}
+                            </span>
+                        </button>
+                    </td>
+                    <td class="p-4">
+                        <div class="w-16 h-16 rounded-xl overflow-hidden bg-white dark:bg-dark-900 border border-slate-200 dark:border-white/10 shadow-sm relative group-hover:shadow-md transition-all">
+                            <img src="${item.image}" onerror="handleImageError(this)" alt="${item.name}" class="w-full h-full object-cover">
+                        </div>
+                    </td>
+                    <td class="p-4">
+                        <div class="flex flex-col">
+                            <span class="font-semibold text-slate-800 dark:text-gray-200 text-sm ${isBought ? 'line-through decoration-slate-400' : ''}">${item.name}</span>
+                            <span class="text-[10px] text-slate-500 dark:text-gray-500 bg-slate-100 dark:bg-dark-900 border dark:border-white/10 w-max px-2 py-0.5 rounded mt-1 uppercase tracking-wider font-medium">${item.category}</span>
+                        </div>
+                    </td>
+                    <td class="p-4 text-center">
+                        <input type="number" min="1" max="5" value="${item.needScore}" 
+                            class="w-12 h-9 text-center bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-white/10 hover:bg-white dark:hover:bg-dark-900 rounded-lg font-bold text-slate-700 dark:text-gray-300 outline-none transition-all focus:border-cyan-500 focus:bg-white dark:focus:bg-dark-900 focus:ring-1 focus:ring-cyan-500"
+                            onchange="updateItem(${item.id}, 'needScore', this.value)" ${isBought ? 'disabled' : ''}>
+                    </td>
+                    <td class="p-4 text-center">
+                        <input type="number" min="1" max="5" value="${item.costScore}" 
+                            class="w-12 h-9 text-center bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-white/10 hover:bg-white dark:hover:bg-dark-900 rounded-lg font-bold text-slate-700 dark:text-gray-300 outline-none transition-all focus:border-cyan-500 focus:bg-white dark:focus:bg-dark-900 focus:ring-1 focus:ring-cyan-500"
+                            onchange="updateItem(${item.id}, 'costScore', this.value)" ${isBought ? 'disabled' : ''}>
+                    </td>
+                    <td class="p-4 text-center">
+                         <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${badge.class}">
+                            ${priorityScore} - ${badge.label}
+                        </span>
+                    </td>
+                    <td class="p-4 text-right">
+                         <div class="relative group/price">
+                            <span class="font-semibold text-slate-700 dark:text-gray-300 text-sm whitespace-nowrap font-mono">${formatMoney(item.price)}</span>
+                        </div>
+                    </td>
+                    <td class="p-4 text-center">
+                         <a href="https://www.google.com/search?q=${encodeURIComponent(item.name + ' fiyatları')}&tbm=shop" target="_blank" 
+                            class="p-2 inline-flex rounded-lg text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 dark:hover:bg-white/10 dark:hover:text-cyan-400 transition-all border border-transparent hover:border-cyan-200 dark:hover:border-white/10" title="Google'da Ara">
+                            <span class="material-symbols-outlined">search</span>
+                        </a>
+                    </td>
+                `;
+                dom.tableBody.appendChild(row);
+            });
+        }
+
+        function updateItem(id, field, value) {
+            const item = appData.find(i => i.id === id);
+            if (item) {
+                item[field] = parseFloat(value);
+                updateStats();
+                renderTable();
+            }
+        }
+
+        function toggleBought(id) {
+            const item = appData.find(i => i.id === id);
+            if (item) {
+                item.bought = !item.bought;
+                updateStats();
+                renderTable();
+            }
+        }
+
+        function sortTable(key) {
+            if (sortConfig.key === key) {
+                sortConfig.direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortConfig.key = key;
+                sortConfig.direction = 'asc';
+            }
+            renderTable();
+        }
+
+        function resetData() {
+            if(confirm('Verileri sıfırlamak istediğinize emin misiniz?')) {
+                appData = JSON.parse(JSON.stringify(defaultData));
+                updateStats();
+                renderTable();
+            }
+        }
+
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.filter-btn').forEach(b => {
+                    // Reset classes to default state
+                    b.className = 'filter-btn px-4 py-2 rounded-xl text-xs font-semibold transition-all bg-white dark:bg-dark-700 text-slate-600 dark:text-gray-300 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-dark-700 dark:hover:text-white';
+                });
+                
+                // Set Active classes
+                e.target.className = 'filter-btn active px-4 py-2 rounded-xl text-xs font-semibold transition-all bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-900/20 hover:shadow-cyan-500/30 border border-transparent';
+                
+                currentFilter = e.target.dataset.filter;
+                renderTable();
+            });
+        });
+
+        dom.searchInput.addEventListener('input', renderTable);
+        dom.budgetInput.addEventListener('input', updateStats);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initTheme(); 
+            initCharts();
+            updateStats();
+            renderTable();
+        });
+
+    </script>
+</body>
+</html>
