@@ -1,0 +1,46 @@
+body { background-color: #0f111a; color: #e5e7eb; }
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: #0f111a; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+tr.hover-row:hover td { background-color: rgba(255, 255, 255, 0.03); }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+
+/* Editlenebilir hücreler için gösterge */
+.editable-cell, .editable-sub-text, .editable-sub-number { 
+    cursor: pointer; 
+    border-bottom: 1px dashed rgba(255,255,255,0.2); 
+    transition: all 0.2s; 
+}
+.editable-cell:hover, .editable-sub-text:hover, .editable-sub-number:hover { 
+    border-bottom-color: #3b82f6; 
+    color: #fff; 
+    background-color: rgba(59, 130, 246, 0.1);
+}
+
+.sortable-ghost { opacity: 0.4; background-color: #3b82f6 !important; }
+.drag-handle { cursor: grab; color: #4b5563; }
+.drag-handle:active { cursor: grabbing; color: #3b82f6; }
+
+.btn-delete { opacity: 0.3; transition: opacity 0.2s; }
+tr:hover .btn-delete { opacity: 1; }
+
+@media print {
+    body * { visibility: hidden; }
+    #detail-modal, #detail-modal * { visibility: visible; }
+    #detail-modal { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: white; color: black; }
+    .no-print { display: none !important; }
+}
+
+/* Mobile Fixes */
+@media screen and (max-width: 768px) {
+    /* Prevent iOS Zoom on focus */
+    input, select, textarea { font-size: 16px !important; } 
+    
+    /* Better touch targets */
+    button { min-height: 44px; }
+    
+    /* Ensure modals cover screen nicely */
+    #detail-modal > div { height: 100% !important; max-height: 100% !important; border-radius: 0; }
+}
